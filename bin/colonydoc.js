@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { serve, serveStatic } from '@hono/node-server'
+import { serve } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { createFileRouter } from '../dist/server/api.js'
@@ -8,6 +9,13 @@ import { loadConfig } from '../dist/config.js'
 import { setupWatcher } from '../dist/server/watcher.js'
 import { WebSocketServer } from 'ws'
 import { createServer } from 'http'
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const pkg = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'))
 
 const argv = process.argv.slice(2)
 const args = {}
@@ -54,7 +62,7 @@ Options:
 }
 
 if (args.version) {
-  console.log(`colonydoc v0.1.0`)
+  console.log(`colonydoc v${pkg.version}`)
   process.exit(0)
 }
 
