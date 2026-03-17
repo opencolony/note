@@ -1,9 +1,14 @@
 # ColonyDoc
 
+[简体中文](./README.zh.md) | English
+
 A modern Markdown online editor with real-time preview, Mermaid diagrams, and LaTeX support.
+
+> ✨ **Edit server-side Markdown files** - No upload needed, edit directly in your browser!
 
 ## Features
 
+- **Server-side Editing** - Edit markdown files on server directly in browser
 - **Real-time Preview** - Live rendering as you type
 - **Mermaid Support** - Render flowcharts, sequence diagrams, Gantt charts, and more
 - **LaTeX Formulas** - Full support for mathematical expressions
