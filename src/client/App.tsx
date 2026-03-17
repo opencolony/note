@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react'
+import React, { useState, useCallback, useEffect, lazy, Suspense, useRef } from 'react'
 import { Popup } from 'antd-mobile'
 import { PlusOutlined, EyeOutlined, EditOutlined, UnorderedListOutlined, FileTextOutlined } from '@ant-design/icons'
 import { useTheme } from './hooks/useTheme'
@@ -28,6 +28,8 @@ function App() {
   const [currentDir, setCurrentDir] = useState('')
 
   const [isSaving, setIsSaving] = useState(false)
+  const fetchingRef = useRef(false)
+  const loadingRef = useRef<string | null>(null)
 
   const {
     content,
@@ -63,12 +65,16 @@ function App() {
   }, [resolvedTheme])
 
   const fetchFiles = useCallback(async () => {
+    if (fetchingRef.current) return
+    fetchingRef.current = true
     try {
       const res = await fetch('/api/files')
       const data = await res.json()
       setFiles(data.files || [])
     } catch (e) {
       console.error('Failed to fetch files:', e)
+    } finally {
+      fetchingRef.current = false
     }
   }, [])
 
@@ -96,7 +102,8 @@ function App() {
 
   useEffect(() => {
     const hash = decodeURIComponent(window.location.hash.slice(1))
-    if (hash) {
+    if (hash && loadingRef.current !== hash) {
+      loadingRef.current = hash
       load(hash)
       const dir = hash.substring(0, hash.lastIndexOf('/'))
       setCurrentDir(dir)
