@@ -403,6 +403,19 @@ body {
   max-width: 100%;
 }
 
+/* Fix Mermaid graph background in dark mode */
+[data-theme='dark'] .ant-mermaid-graph {
+  background-color: var(--color-bg) !important;
+}
+
+[data-theme='dark'] .ant-mermaid-graph svg {
+  background-color: transparent !important;
+}
+
+[data-theme='dark'] .ant-mermaid-graph svg rect:first-child {
+  fill: var(--color-bg) !important;
+}
+
 /* KaTeX styles */
 .katex {
   font-size: 1.1em;

@@ -24,7 +24,7 @@ const CodeBlock = memo(function CodeBlock({ children, lang, block, ...props }: R
   
   if (lang === 'mermaid' && block) {
     const code = typeof children === 'string' ? children : ''
-    return <AntdMermaid config={{ theme: theme ? 'dark' : 'default' }}>{code}</AntdMermaid>
+    return <AntdMermaid key={theme ? 'dark' : 'light'} config={{ theme: theme ? 'dark' : 'default' }}>{code}</AntdMermaid>
   }
   if (block) {
     const code = typeof children === 'string' ? children : ''
