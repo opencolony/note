@@ -183,11 +183,11 @@ body {
 .file-tree-item {
   display: flex;
   align-items: flex-start;
-  padding: 8px 12px;
-  min-height: 36px;
+  padding: 3px 6px;
+  min-height: 24px;
   cursor: pointer;
-  gap: 6px;
-  font-size: 14px;
+  gap: 4px;
+  font-size: 13px;
 }
 
 .file-tree-item:hover {
@@ -199,14 +199,14 @@ body {
 }
 
 .tree-icon {
-  width: 20px;
+  width: 16px;
   text-align: center;
   flex-shrink: 0;
   line-height: 1;
 }
 
 .tree-icon .anticon {
-  font-size: 16px;
+  font-size: 13px;
   vertical-align: -0.1em;
 }
 
@@ -216,8 +216,8 @@ body {
 }
 
 .tree-delete {
-  padding: 4px;
-  font-size: 12px;
+  padding: 1px;
+  font-size: 11px;
   opacity: 0;
   flex-shrink: 0;
 }
@@ -227,16 +227,16 @@ body {
 }
 
 .file-tree-children {
-  margin-left: 12px;
-  padding-left: 8px;
+  margin-left: 4px;
+  padding-left: 4px;
   border-left: 1px solid var(--color-border);
   min-width: max-content;
 }
 
 @media (max-width: 768px) {
   .file-tree-item {
-    min-height: 44px;
-    padding: 10px 16px;
+    min-height: 40px;
+    padding: 8px 12px;
     font-size: 16px;
   }
 
@@ -245,8 +245,8 @@ body {
   }
 
   .file-tree-children {
-    margin-left: 16px;
-    padding-left: 10px;
+    margin-left: 12px;
+    padding-left: 8px;
   }
 }
 
