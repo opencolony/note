@@ -205,6 +205,11 @@ body {
   line-height: 1;
 }
 
+.tree-icon .anticon {
+  font-size: 16px;
+  vertical-align: -0.1em;
+}
+
 .tree-name {
   flex: 1;
   word-break: break-all;
@@ -294,6 +299,10 @@ body {
   font-size: 48px;
   margin-bottom: 16px;
   opacity: 0.5;
+}
+
+.empty-state-icon .anticon {
+  font-size: 48px;
 }
 
 .icon-btn {

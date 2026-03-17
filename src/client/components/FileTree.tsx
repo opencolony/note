@@ -1,4 +1,5 @@
 import React from 'react'
+import { FolderOpenFilled, FolderFilled, FileFilled, DeleteOutlined } from '@ant-design/icons'
 
 interface FileNode {
   name: string
@@ -48,11 +49,11 @@ function TreeNode({ node, activePath, onSelect, onDelete }: TreeNodeProps) {
         onClick={handleClick}
       >
         <span className="tree-icon">
-          {isDirectory ? (expanded ? '📂' : '📁') : '📄'}
+          {isDirectory ? (expanded ? <FolderOpenFilled /> : <FolderFilled />) : <FileFilled />}
         </span>
         <span className="tree-name">{node.name}</span>
         <button className="icon-btn tree-delete" onClick={handleDelete}>
-          🗑️
+          <DeleteOutlined />
         </button>
       </div>
       {isDirectory && expanded && node.children && (
@@ -77,7 +78,7 @@ export function FileTree({ files, activePath, currentDir, onSelect, onDelete }: 
     <div className="sidebar-content">
       {files.length === 0 ? (
         <div className="empty-state" style={{ padding: 24 }}>
-          <div className="empty-state-icon">📂</div>
+          <div className="empty-state-icon"><FolderOpenFilled /></div>
           <div>暂无文件</div>
         </div>
       ) : (

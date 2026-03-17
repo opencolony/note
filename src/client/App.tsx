@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { Popup } from 'antd-mobile'
+import { PlusOutlined, EyeOutlined, EditOutlined, UnorderedListOutlined, FileTextOutlined } from '@ant-design/icons'
 import { useTheme } from './hooks/useTheme'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
@@ -159,7 +160,7 @@ function App() {
             className="icon-btn view-toggle-btn" 
             onClick={handleToggleMobileView}
           >
-            {viewMode === 'edit' ? '👁️' : '✏️'}
+            {viewMode === 'edit' ? <EyeOutlined /> : <EditOutlined />}
           </button>
         </div>
       )}
@@ -177,7 +178,7 @@ function App() {
                 <span className="sidebar-title">ColonyDoc</span>
                 <div className="sidebar-actions">
                   <button className="icon-btn" onClick={() => setCreateModalVisible(true)} title="新建">
-                    ➕
+                    <PlusOutlined />
                   </button>
                   <ThemeToggle />
                 </div>
@@ -197,7 +198,7 @@ function App() {
               <span className="sidebar-title">ColonyDoc</span>
               <div className="sidebar-actions">
                 <button className="icon-btn" onClick={() => setCreateModalVisible(true)} title="新建">
-                  ➕
+                  <PlusOutlined />
                 </button>
                 <ThemeToggle />
               </div>
@@ -223,7 +224,7 @@ function App() {
                 <button className="icon-btn" onClick={() => {
                   setViewMode(prev => prev === 'split' ? 'edit' : prev === 'edit' ? 'preview' : 'split')
                 }}>
-                  {viewMode === 'split' ? '👁️' : viewMode === 'edit' ? '📑' : '✏️'}
+                  {viewMode === 'split' ? <EyeOutlined /> : viewMode === 'edit' ? <UnorderedListOutlined /> : <EditOutlined />}
                 </button>
               </div>
             </div>
@@ -232,7 +233,7 @@ function App() {
           <div className="editor-container">
             {!path ? (
               <div className="empty-state">
-                <div className="empty-state-icon">📝</div>
+                <div className="empty-state-icon"><FileTextOutlined /></div>
                 <div>选择一个文件开始编辑</div>
               </div>
             ) : (
