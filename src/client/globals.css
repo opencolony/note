@@ -124,12 +124,24 @@
   max-width: 100%;
 }
 
-.dark .mermaid-container {
-  @apply bg-background;
-}
-
 .dark .mermaid-container svg {
   background-color: transparent;
+}
+
+.dark .mermaid-container svg .nodeLabel,
+.dark .mermaid-container svg .edgeLabel,
+.dark .mermaid-container svg .label,
+.dark .mermaid-container svg text {
+  color: #f8fafc !important;
+  fill: #f8fafc !important;
+}
+
+.dark .mermaid-container svg .edgePath .path {
+  stroke: #94a3b8 !important;
+}
+
+.dark .mermaid-container svg .arrowheadPath {
+  fill: #94a3b8 !important;
 }
 
 .katex {

@@ -3,19 +3,40 @@ import { codeBlockConfig, type CodeBlockConfig } from '@milkdown/kit/component/c
 import { Editor } from '@milkdown/kit/core'
 import { codeBlockSchema } from '@milkdown/kit/preset/commonmark'
 
-let currentTheme: 'default' | 'dark' = 'default'
+type MermaidTheme = 'default' | 'dark' | 'base'
 
-function getMermaidTheme(): 'default' | 'dark' {
+let currentTheme: MermaidTheme = 'default'
+
+function getMermaidTheme(): MermaidTheme {
   if (typeof document === 'undefined') return 'default'
-  return document.documentElement.classList.contains('dark') ? 'dark' : 'default'
+  return document.documentElement.classList.contains('dark') ? 'base' : 'default'
 }
 
-function initMermaid(theme: 'default' | 'dark') {
-  mermaid.initialize({
-    startOnLoad: false,
-    theme,
-    securityLevel: 'loose',
-  })
+function initMermaid(theme: MermaidTheme) {
+  if (theme === 'base') {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        primaryColor: '#6366f1',
+        primaryTextColor: '#ffffff',
+        primaryBorderColor: '#818cf8',
+        lineColor: '#94a3b8',
+        secondaryColor: '#3b82f6',
+        tertiaryColor: '#8b5cf6',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      },
+      securityLevel: 'loose',
+    })
+  } else {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose',
+    })
+  }
   currentTheme = theme
 }
 
