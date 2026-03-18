@@ -176,14 +176,9 @@
   transition: opacity 0.15s;
 }
 
-.sidebar-menu-item:hover > .sidebar-menu-item-delete,
-.sidebar-menu-item:hover > * > .sidebar-menu-item-delete {
+.sidebar-menu-item:hover:not(:has(.sidebar-menu-item:hover)) > .sidebar-menu-item-delete,
+.sidebar-menu-item:hover:not(:has(.sidebar-menu-item:hover)) :not(.sidebar-menu-item) > .sidebar-menu-item-delete {
   opacity: 1;
-}
-
-.sidebar-menu-item:has(.sidebar-menu-item:hover) > .sidebar-menu-item-delete,
-.sidebar-menu-item:has(.sidebar-menu-item:hover) > * > .sidebar-menu-item-delete {
-  opacity: 0;
 }
 
 @keyframes slide-in-from-left {
