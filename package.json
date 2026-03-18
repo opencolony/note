@@ -38,7 +38,10 @@
   "dependencies": {
     "@hono/node-server": "^1.13.7",
     "@milkdown/crepe": "^7.19.0",
+    "@milkdown/plugin-listener": "^7.19.0",
+    "@milkdown/prose": "^7.19.0",
     "@milkdown/react": "^7.19.0",
+    "@milkdown/utils": "^7.19.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-dialog": "^1.1.15",
