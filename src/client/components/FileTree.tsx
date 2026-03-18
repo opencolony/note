@@ -51,7 +51,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
   const isDirectory = node.type === 'directory'
   const isActive = node.path === activePath
   const isExpanded = expandedPaths.has(node.path)
-  const canDelete = !isDirectory || !node.children || node.children.length === 0
+  const hasChildren = isDirectory && node.children && node.children.length > 0
 
   if (!isDirectory) {
     return (
@@ -64,8 +64,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
           <File className="size-4 shrink-0" />
           <span className="flex-1 whitespace-nowrap">{node.name}</span>
         </SidebarMenuButton>
-        {canDelete && (
-          <button
+        <button
             data-sidebar="menu-action"
             onClick={(e) => {
               e.stopPropagation()
@@ -75,7 +74,6 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
           >
             <Trash2 className="size-3.5" />
           </button>
-        )}
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
@@ -128,15 +126,13 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
               <span className="flex-1 whitespace-nowrap">{node.name}</span>
             </SidebarMenuButton>
           </CollapsibleTrigger>
-          {canDelete && (
-            <button
+          <button
               data-sidebar="menu-action"
               onClick={() => setDeleteDialogOpen(true)}
               className="sidebar-menu-item-delete size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive"
             >
               <Trash2 className="size-3.5" />
             </button>
-          )}
         </div>
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -144,7 +140,13 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
             <AlertDialogHeader>
               <AlertDialogTitle>确认删除</AlertDialogTitle>
               <AlertDialogDescription>
-                确定要删除 {node.name} 吗？此操作无法撤销。
+                {hasChildren ? (
+                  <span className="text-destructive font-medium">
+                    文件夹「{node.name}」包含 {node.children?.length} 个项目，删除后将全部删除且无法恢复。确定要继续吗？
+                  </span>
+                ) : (
+                  `确定要删除 ${node.name} 吗？此操作无法撤销。`
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
