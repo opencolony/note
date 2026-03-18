@@ -55,7 +55,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
 
   if (!isDirectory) {
     return (
-      <SidebarMenuItem>
+      <SidebarMenuItem className="sidebar-menu-item">
         <SidebarMenuButton
           isActive={isActive}
           className="data-[active=true]:bg-transparent pr-8"
@@ -71,7 +71,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
               e.stopPropagation()
               setDeleteDialogOpen(true)
             }}
-            className="absolute right-1 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover/menu-item:opacity-100 transition-opacity z-10"
+            className="sidebar-menu-item-delete absolute right-1 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive z-10"
           >
             <Trash2 className="size-3.5" />
           </button>
@@ -101,7 +101,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
   }
 
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem className="sidebar-menu-item">
       <Collapsible
         className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
         open={isExpanded}
@@ -132,7 +132,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
             <button
               data-sidebar="menu-action"
               onClick={() => setDeleteDialogOpen(true)}
-              className="size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover/menu-item:opacity-100 transition-opacity"
+              className="sidebar-menu-item-delete size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive"
             >
               <Trash2 className="size-3.5" />
             </button>
