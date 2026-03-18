@@ -3,6 +3,7 @@ import { Crepe, type CrepeConfig } from '@milkdown/crepe'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
 import 'katex/dist/katex.min.css'
+import { mermaidFeature } from './mermaid-plugin'
 
 interface MilkdownEditorProps {
   value: string
@@ -48,6 +49,7 @@ export function MilkdownEditor({ value, onChange, mode, placeholder, readOnly }:
     }
 
     const crepe = new Crepe(config)
+    crepe.addFeature(mermaidFeature)
 
     crepe.on((listener) => {
       listener.markdownUpdated((_ctx, markdown) => {
