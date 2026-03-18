@@ -66,11 +66,12 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
         </SidebarMenuButton>
         {canDelete && (
           <button
+            data-sidebar="menu-action"
             onClick={(e) => {
               e.stopPropagation()
               setDeleteDialogOpen(true)
             }}
-            className="absolute right-1 size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover/menu-item:opacity-100 transition-opacity"
+            className="absolute right-1 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover/menu-item:opacity-100 transition-opacity z-10"
           >
             <Trash2 className="size-3.5" />
           </button>
@@ -129,6 +130,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
           </CollapsibleTrigger>
           {canDelete && (
             <button
+              data-sidebar="menu-action"
               onClick={() => setDeleteDialogOpen(true)}
               className="size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover/menu-item:opacity-100 transition-opacity"
             >
