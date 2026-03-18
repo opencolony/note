@@ -25,9 +25,13 @@ function App() {
   const [files, setFiles] = useState<FileNode[]>([])
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 768
+  })
   const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('split')
   const [currentDir, setCurrentDir] = useState('')
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
 
   const [isSaving, setIsSaving] = useState(false)
   const fetchingRef = useRef(false)
@@ -55,6 +59,22 @@ function App() {
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  useEffect(() => {
+    if (!path) return
+    const parts = path.split('/').filter(Boolean)
+    const dirs: string[] = []
+    for (let i = 0; i < parts.length - 1; i++) {
+      dirs.push('/' + parts.slice(0, i + 1).join('/'))
+    }
+    if (dirs.length > 0) {
+      setExpandedPaths(prev => {
+        const next = new Set(prev)
+        dirs.forEach(d => next.add(d))
+        return next
+      })
+    }
+  }, [path])
 
   useEffect(() => {
     if (isMobile && viewMode === 'split') {
@@ -171,6 +191,8 @@ function App() {
         files={files}
         activePath={path}
         currentDir={currentDir}
+        expandedPaths={expandedPaths}
+        setExpandedPaths={setExpandedPaths}
         onSelect={handleSelectFile}
         onDelete={handleDeleteFile}
       />

@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, SetStateAction, useState } from 'react'
 import { ChevronRight, File, Folder, Trash2 } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible'
@@ -33,19 +33,24 @@ interface FileTreeProps {
   files: FileNode[]
   activePath: string | null
   currentDir: string
+  expandedPaths: Set<string>
+  setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory') => void
   onDelete: (path: string) => void
 }
 
-function TreeNode({ node, activePath, onSelect, onDelete }: {
+function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete }: {
   node: FileNode
   activePath: string | null
+  expandedPaths: Set<string>
+  setExpandedPaths: React.Dispatch<SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory') => void
   onDelete: (path: string) => void
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const isDirectory = node.type === 'directory'
   const isActive = node.path === activePath
+  const isExpanded = expandedPaths.has(node.path)
 
   if (!isDirectory) {
     return (
@@ -95,7 +100,18 @@ function TreeNode({ node, activePath, onSelect, onDelete }: {
     <SidebarMenuItem>
       <Collapsible
         className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
-        defaultOpen={isActive}
+        open={isExpanded}
+        onOpenChange={(open) => {
+          setExpandedPaths((prev) => {
+            const next = new Set(prev)
+            if (open) {
+              next.add(node.path)
+            } else {
+              next.delete(node.path)
+            }
+            return next
+          })
+        }}
       >
         <div className="flex items-center">
           <CollapsibleTrigger asChild>
@@ -143,6 +159,8 @@ function TreeNode({ node, activePath, onSelect, onDelete }: {
                 key={child.path}
                 node={child}
                 activePath={activePath}
+                expandedPaths={expandedPaths}
+                setExpandedPaths={setExpandedPaths}
                 onSelect={onSelect}
                 onDelete={onDelete}
               />
@@ -161,7 +179,7 @@ const EMPTY_STATE = (
   </div>
 )
 
-export const FileTree = memo(function FileTree({ files, activePath, currentDir, onSelect, onDelete }: FileTreeProps) {
+export const FileTree = memo(function FileTree({ files, activePath, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete }: FileTreeProps) {
   if (files.length === 0) {
     return (
       <div className="flex-1 overflow-y-auto">
@@ -182,6 +200,8 @@ export const FileTree = memo(function FileTree({ files, activePath, currentDir, 
                   key={node.path}
                   node={node}
                   activePath={activePath}
+                  expandedPaths={expandedPaths}
+                  setExpandedPaths={setExpandedPaths}
                   onSelect={onSelect}
                   onDelete={onDelete}
                 />
