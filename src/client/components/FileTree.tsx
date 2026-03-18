@@ -58,7 +58,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
       <SidebarMenuItem>
         <SidebarMenuButton
           isActive={isActive}
-          className="data-[active=true]:bg-transparent group"
+          className="data-[active=true]:bg-transparent pr-8"
           onClick={() => onSelect(node.path, 'file')}
         >
           <File className="size-4 shrink-0" />
@@ -121,7 +121,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
           <CollapsibleTrigger asChild>
             <SidebarMenuButton
               isActive={isActive}
-              className="data-[active=true]:bg-transparent group flex-1"
+              className="data-[active=true]:bg-transparent flex-1 pr-8"
             >
               <ChevronRight className="size-4 shrink-0 transition-transform" />
               <Folder className="size-4 shrink-0" />
