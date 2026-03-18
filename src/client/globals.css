@@ -124,24 +124,53 @@
   max-width: 100%;
 }
 
-.dark .mermaid-container svg {
+.dark .mermaid-container svg,
+.dark .milkdown .ProseMirror svg {
   background-color: transparent;
 }
 
 .dark .mermaid-container svg .nodeLabel,
 .dark .mermaid-container svg .edgeLabel,
 .dark .mermaid-container svg .label,
-.dark .mermaid-container svg text {
+.dark .mermaid-container svg text,
+.dark .milkdown .ProseMirror svg .nodeLabel,
+.dark .milkdown .ProseMirror svg .edgeLabel,
+.dark .milkdown .ProseMirror svg .label,
+.dark .milkdown .ProseMirror svg text,
+.dark .milkdown .ProseMirror svg .node .label,
+.dark .milkdown .ProseMirror svg .node .label-container text,
+.dark .milkdown .ProseMirror svg .cluster-label,
+.dark .milkdown .ProseMirror svg .cluster-label span {
   color: #f8fafc !important;
   fill: #f8fafc !important;
 }
 
-.dark .mermaid-container svg .edgePath .path {
+.dark .mermaid-container svg .edgePath .path,
+.dark .milkdown .ProseMirror svg .edgePath .path,
+.dark .milkdown .ProseMirror svg .flowchart-link {
   stroke: #94a3b8 !important;
 }
 
-.dark .mermaid-container svg .arrowheadPath {
+.dark .mermaid-container svg .arrowheadPath,
+.dark .milkdown .ProseMirror svg .arrowheadPath,
+.dark .milkdown .ProseMirror svg marker path {
   fill: #94a3b8 !important;
+}
+
+.dark .milkdown .ProseMirror svg .node rect,
+.dark .milkdown .ProseMirror svg .node circle,
+.dark .milkdown .ProseMirror svg .node ellipse,
+.dark .milkdown .ProseMirror svg .node polygon,
+.dark .milkdown .ProseMirror svg .node path {
+  stroke: #6366f1 !important;
+}
+
+.dark .milkdown .ProseMirror svg .edgeLabel {
+  background-color: var(--color-background) !important;
+}
+
+.dark .milkdown .ProseMirror svg .label {
+  background-color: transparent !important;
 }
 
 .katex {
