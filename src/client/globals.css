@@ -1,10 +1,6 @@
 @import "tailwindcss";
 
 @theme {
-  --breakpoint-md: 768px;
-  --breakpoint-lg: 1024px;
-  --breakpoint-xl: 1280px;
-
   --color-background: oklch(100% 0 0);
   --color-foreground: oklch(20% 0.02 264);
   --color-card: oklch(100% 0 0);
@@ -42,38 +38,6 @@
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
 }
 
-@custom-variant dark (&:where(.dark, .dark *));
-
-.dark {
-  --color-background: oklch(14.5% 0.025 264);
-  --color-foreground: oklch(98% 0.01 264);
-  --color-card: oklch(14.5% 0.025 264);
-  --color-card-foreground: oklch(98% 0.01 264);
-  --color-popover: oklch(14.5% 0.025 264);
-  --color-popover-foreground: oklch(98% 0.01 264);
-  --color-primary: oklch(65% 0.18 264);
-  --color-primary-foreground: oklch(14.5% 0.025 264);
-  --color-secondary: oklch(22% 0.02 264);
-  --color-secondary-foreground: oklch(98% 0.01 264);
-  --color-muted: oklch(22% 0.02 264);
-  --color-muted-foreground: oklch(65% 0.02 264);
-  --color-accent: oklch(22% 0.02 264);
-  --color-accent-foreground: oklch(98% 0.01 264);
-  --color-destructive: oklch(55% 0.2 27);
-  --color-destructive-foreground: oklch(98% 0.01 264);
-  --color-border: oklch(22% 0.02 264);
-  --color-input: oklch(22% 0.02 264);
-  --color-ring: oklch(65% 0.18 264);
-  --color-sidebar: oklch(12% 0.02 264);
-  --color-sidebar-foreground: oklch(98% 0.01 264);
-  --color-sidebar-primary: oklch(65% 0.18 264);
-  --color-sidebar-primary-foreground: oklch(98% 0.01 264);
-  --color-sidebar-accent: oklch(22% 0.02 264);
-  --color-sidebar-accent-foreground: oklch(98% 0.01 264);
-  --color-sidebar-border: oklch(22% 0.02 264);
-  --color-sidebar-ring: oklch(65% 0.18 264);
-}
-
 @layer base {
   * {
     @apply border-border;
@@ -106,95 +70,6 @@
 
 .editor-textarea {
   @apply w-full h-full border-0 outline-none p-4 font-mono text-base leading-relaxed resize-none bg-background text-foreground placeholder:text-muted-foreground;
-}
-
-.preview-pane {
-  @apply flex-1 overflow-y-auto p-4 bg-background;
-}
-
-.preview-pane table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 1rem 0;
-}
-
-.preview-pane table th,
-.preview-pane table td {
-  @apply border border-border px-3 py-2 text-left;
-}
-
-.preview-pane table th {
-  @apply bg-muted font-semibold;
-}
-
-.preview-pane table tr:nth-child(even) {
-  @apply bg-muted/50;
-}
-
-.mermaid-container {
-  @apply flex justify-center p-4 bg-background rounded-lg my-4 overflow-auto;
-}
-
-.mermaid-container svg {
-  max-width: 100%;
-}
-
-.mermaid-container svg text {
-  fill: oklch(20% 0.02 264) !important;
-}
-
-.mermaid-container svg .label,
-.mermaid-container svg .nodeLabel,
-.mermaid-container svg .edgeLabel {
-  fill: oklch(20% 0.02 264) !important;
-}
-
-.mermaid-container svg .node rect,
-.mermaid-container svg .node circle,
-.mermaid-container svg .node ellipse,
-.mermaid-container svg .node polygon,
-.mermaid-container svg .node path {
-  fill: #ffffff !important;
-  stroke: #6366f1 !important;
-}
-
-.mermaid-container svg .edgePath .path {
-  stroke: #64748b !important;
-}
-
-.mermaid-container svg .arrowheadPath {
-  fill: #64748b !important;
-}
-
-.dark .mermaid-container svg {
-  background-color: transparent;
-}
-
-.dark .mermaid-container svg text {
-  fill: oklch(98% 0.01 264) !important;
-}
-
-.dark .mermaid-container svg .label,
-.dark .mermaid-container svg .nodeLabel,
-.dark .mermaid-container svg .edgeLabel {
-  fill: oklch(98% 0.01 264) !important;
-}
-
-.dark .mermaid-container svg .node rect,
-.dark .mermaid-container svg .node circle,
-.dark .mermaid-container svg .node ellipse,
-.dark .mermaid-container svg .node polygon,
-.dark .mermaid-container svg .node path {
-  fill: #374151 !important;
-  stroke: #6366f1 !important;
-}
-
-.dark .mermaid-container svg .edgePath .path {
-  stroke: #94a3b8 !important;
-}
-
-.dark .mermaid-container svg .arrowheadPath {
-  fill: #94a3b8 !important;
 }
 
 .katex {
@@ -236,16 +111,7 @@
   @apply w-full min-h-full;
   display: flex;
   flex-direction: column;
-  background-color: var(--color-background) !important;
-  --crepe-color-background: var(--color-background) !important;
-  --crepe-color-on-background: var(--color-foreground) !important;
-  --crepe-color-surface: var(--color-muted) !important;
-  --crepe-color-on-surface: var(--color-foreground) !important;
-  --crepe-color-outline: var(--color-border) !important;
-  --crepe-color-primary: var(--color-primary) !important;
-  --crepe-color-hover: var(--color-accent) !important;
-  --crepe-color-selected: var(--color-muted) !important;
-  --crepe-color-inline-code: oklch(55% 0.2 27) !important;
+  background-color: var(--color-background);
 }
 
 .milkdown-container .milkdown .ProseMirror {
@@ -309,15 +175,4 @@
 
 .milkdown-container .milkdown hr {
   @apply my-6 border-border;
-}
-
-/* Dark theme for Milkdown */
-.dark .milkdown-container .milkdown {
-  --crepe-color-inline-code: oklch(65% 0.2 27) !important;
-  --crepe-shadow-1: none !important;
-  --crepe-shadow-2: none !important;
-}
-
-.dark .milkdown-container .milkdown .ProseMirror {
-  caret-color: var(--color-foreground);
 }

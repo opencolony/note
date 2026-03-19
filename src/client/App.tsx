@@ -4,7 +4,6 @@ import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { FileTree } from './components/FileTree'
 import { MilkdownEditor } from './components/MilkdownEditor'
-import { ThemeToggle } from './components/ThemeToggle'
 import { CreateFileModal } from './components/CreateFileModal'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
@@ -46,7 +45,6 @@ const SidebarContent = memo(function SidebarContent({
           <Button variant="ghost" size="icon" onClick={onCreateClick} title="新建">
             <Plus className="size-4" />
           </Button>
-          <ThemeToggle />
         </div>
       </div>
       <FileTree
