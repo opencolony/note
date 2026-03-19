@@ -31,16 +31,29 @@ const MermaidZoom = memo(function MermaidZoom({
   svgContent: string
   onControlsReady: (controls: { zoomIn: () => void; zoomOut: () => void; resetTransform: () => void }) => void
 }) {
+  const [isZoomed, setIsZoomed] = useState(false)
+  
   return (
     <TransformWrapper
       initialScale={1}
-      minScale={0.2}
+      minScale={1}
       maxScale={5}
-      wheel={{ step: 0.1 }}
-      panning={{ disabled: false }}
+      wheel={{ disabled: true }}
+      panning={{ disabled: !isZoomed }}
+      doubleClick={{ disabled: true }}
+      onTransformed={(_, state) => {
+        setIsZoomed(state.scale > 1)
+      }}
     >
       {({ zoomIn, zoomOut, resetTransform }) => {
-        onControlsReady({ zoomIn, zoomOut, resetTransform })
+        onControlsReady({ 
+          zoomIn, 
+          zoomOut, 
+          resetTransform: () => {
+            resetTransform()
+            setIsZoomed(false)
+          }
+        })
         return (
           <TransformComponent wrapperStyle={{ width: '100%' }}>
             <div dangerouslySetInnerHTML={{ __html: svgContent }} />
