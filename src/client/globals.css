@@ -297,39 +297,22 @@
 
 /* Mermaid Preview Styles */
 .mermaid-preview {
-  min-width: 150px;
-  max-width: 100%;
-  min-height: 180px;
-  max-height: 400px;
+  width: 100%;
+  min-height: 150px;
   padding: 0.75rem;
   position: relative;
-  overflow: hidden;
 }
 
 .mermaid-preview > .react-transform-wrapper {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  width: 100%;
 }
 
 .mermaid-preview > .react-transform-wrapper > .react-transform-component {
   width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.mermaid-preview > .react-transform-wrapper > .react-transform-component > div {
-  transform-origin: center center;
-}
-
-@media (min-width: 768px) {
-  .mermaid-preview {
-    min-width: 200px;
-    min-height: 200px;
-    max-height: 600px;
-    padding: 1rem;
-  }
 }
 
 .mermaid-preview svg {
@@ -337,30 +320,22 @@
   height: auto;
 }
 
+@media (min-width: 768px) {
+  .mermaid-preview {
+    padding: 1rem;
+  }
+}
+
 .mermaid-loading {
   @apply text-muted-foreground text-sm;
 }
 
 .mermaid-zoom-controls {
-  @apply flex gap-1 absolute top-1 right-1 z-10;
-}
-
-@media (min-width: 768px) {
-  .mermaid-zoom-controls {
-    @apply top-2 right-2;
-  }
+  @apply flex gap-1 ml-auto;
 }
 
 .mermaid-zoom-controls button {
-  @apply px-1.5 py-0.5 text-xs rounded bg-muted hover:bg-muted/80 cursor-pointer border border-border select-none;
+  @apply px-1.5 py-0.5 text-xs rounded bg-background hover:bg-muted cursor-pointer border border-border select-none;
   min-width: 28px;
   min-height: 28px;
-}
-
-@media (min-width: 768px) {
-  .mermaid-zoom-controls button {
-    @apply px-2 py-1;
-    min-width: 32px;
-    min-height: 32px;
-  }
 }

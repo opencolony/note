@@ -24,7 +24,13 @@ interface TipTapEditorProps {
   readOnly?: boolean
 }
 
-const MermaidZoom = memo(function MermaidZoom({ svgContent }: { svgContent: string }) {
+const MermaidZoom = memo(function MermaidZoom({ 
+  svgContent,
+  onControlsReady 
+}: { 
+  svgContent: string
+  onControlsReady: (controls: { zoomIn: () => void; zoomOut: () => void; resetTransform: () => void }) => void
+}) {
   return (
     <TransformWrapper
       initialScale={1}
@@ -33,18 +39,14 @@ const MermaidZoom = memo(function MermaidZoom({ svgContent }: { svgContent: stri
       wheel={{ step: 0.1 }}
       panning={{ disabled: false }}
     >
-      {({ zoomIn, zoomOut, resetTransform }) => (
-        <>
-          <div className="mermaid-zoom-controls">
-            <button onClick={() => zoomIn()} title="放大">+</button>
-            <button onClick={() => zoomOut()} title="缩小">−</button>
-            <button onClick={() => resetTransform()} title="重置">⟲</button>
-          </div>
-          <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
+      {({ zoomIn, zoomOut, resetTransform }) => {
+        onControlsReady({ zoomIn, zoomOut, resetTransform })
+        return (
+          <TransformComponent wrapperStyle={{ width: '100%' }}>
             <div dangerouslySetInnerHTML={{ __html: svgContent }} />
           </TransformComponent>
-        </>
-      )}
+        )
+      }}
     </TransformWrapper>
   )
 })
@@ -54,6 +56,7 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
   const isMermaid = node.attrs.language === 'mermaid'
   const [svgContent, setSvgContent] = useState<string>('')
   const [error, setError] = useState<string>('')
+  const [zoomControls, setZoomControls] = useState<{ zoomIn: () => void; zoomOut: () => void; resetTransform: () => void } | null>(null)
   
   const mermaidId = useMemo(() => `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, [])
 
@@ -118,13 +121,23 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
           <option value="markdown">Markdown</option>
           <option value="bash">Bash</option>
         </select>
+        {isMermaid && zoomControls && (
+          <div className="mermaid-zoom-controls" contentEditable={false}>
+            <button onClick={() => zoomControls.zoomIn()} title="放大">+</button>
+            <button onClick={() => zoomControls.zoomOut()} title="缩小">−</button>
+            <button onClick={() => zoomControls.resetTransform()} title="重置">⟲</button>
+          </div>
+        )}
       </div>
       {isMermaid ? (
         <div ref={containerRef} className="mermaid-preview" contentEditable={false}>
           {error ? (
             <div className="mermaid-error">Mermaid Error: {error}</div>
           ) : svgContent ? (
-            <MermaidZoom svgContent={svgContent} />
+            <MermaidZoom 
+              svgContent={svgContent} 
+              onControlsReady={setZoomControls}
+            />
           ) : (
             <div className="mermaid-loading">渲染中...</div>
           )}
