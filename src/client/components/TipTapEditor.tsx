@@ -4,9 +4,10 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Markdown } from 'tiptap-markdown'
 import { common, createLowlight } from 'lowlight'
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo, memo } from 'react'
 import mermaid from 'mermaid'
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 
 mermaid.initialize({
   startOnLoad: false,
@@ -22,6 +23,31 @@ interface TipTapEditorProps {
   placeholder?: string
   readOnly?: boolean
 }
+
+const MermaidZoom = memo(function MermaidZoom({ svgContent }: { svgContent: string }) {
+  return (
+    <TransformWrapper
+      initialScale={1}
+      minScale={0.2}
+      maxScale={5}
+      wheel={{ step: 0.1 }}
+      panning={{ disabled: false }}
+    >
+      {({ zoomIn, zoomOut, resetTransform }) => (
+        <>
+          <div className="mermaid-zoom-controls">
+            <button onClick={() => zoomIn()} title="放大">+</button>
+            <button onClick={() => zoomOut()} title="缩小">−</button>
+            <button onClick={() => resetTransform()} title="重置">⟲</button>
+          </div>
+          <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
+            <div dangerouslySetInnerHTML={{ __html: svgContent }} />
+          </TransformComponent>
+        </>
+      )}
+    </TransformWrapper>
+  )
+})
 
 function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -98,7 +124,7 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
           {error ? (
             <div className="mermaid-error">Mermaid Error: {error}</div>
           ) : svgContent ? (
-            <div dangerouslySetInnerHTML={{ __html: svgContent }} />
+            <MermaidZoom svgContent={svgContent} />
           ) : (
             <div className="mermaid-loading">渲染中...</div>
           )}
