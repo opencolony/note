@@ -154,7 +154,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
           })
         }}
       >
-        <div className="flex items-center">
+        <div className="flex items-center relative">
           <CollapsibleTrigger asChild>
             <SidebarMenuButton
               isActive={isActive}
@@ -168,7 +168,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
           <button
               data-sidebar="menu-action"
               onClick={() => setDeleteDialogOpen(true)}
-              className="sidebar-menu-item-delete size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive"
+              className="sidebar-menu-item-delete absolute right-1 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive z-10"
             >
               <Trash2 className="size-3.5" />
             </button>

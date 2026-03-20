@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
-import { Plus, Code, Eye, List, FileText, Folder, Search } from 'lucide-react'
+import { Plus, Code, Eye, List, FileText, Folder, Search, X } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { FileTree } from './components/FileTree'
@@ -30,6 +30,7 @@ interface SidebarContentProps {
   onEditingChange?: (type: 'file' | 'directory' | null) => void
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
   onSearchOpen?: () => void
+  onClose?: () => void
 }
 
 const SidebarContent = memo(function SidebarContent({
@@ -45,11 +46,19 @@ const SidebarContent = memo(function SidebarContent({
   onEditingChange,
   onCreateSubmit,
   onSearchOpen,
+  onClose,
 }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <span className="font-semibold text-sm">ColonyDoc</span>
+        <div className="flex items-center gap-2">
+          {onClose && (
+            <Button variant="ghost" size="icon" onClick={onClose} title="关闭" className="md:hidden">
+              <X className="size-4" />
+            </Button>
+          )}
+          <span className="font-semibold text-sm">ColonyDoc</span>
+        </div>
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" onClick={onSearchOpen} title="搜索">
             <Search className="size-4" />
@@ -310,6 +319,7 @@ function App() {
                 onEditingChange={handleEditingChange}
                 onCreateSubmit={handleCreateSubmit}
                 onSearchOpen={() => setSearchDialogOpen(true)}
+                onClose={() => setDrawerVisible(false)}
               />
             </aside>
           </>
