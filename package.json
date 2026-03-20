@@ -39,7 +39,7 @@
     "preview": "vite preview",
     "start": "node dist/server/index.js",
     "typecheck": "tsc --noEmit",
-    "release": "bumpp --release --execute \"npm run build\" && npm publish",
+    "release": "bumpp",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
