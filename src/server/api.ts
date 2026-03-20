@@ -80,6 +80,40 @@ export function createFileRouter(config: ColonydocConfig) {
     }
   })
 
+  router.get('/content', async (c) => {
+    const pathsParam = c.req.query('paths')
+    if (!pathsParam) {
+      return c.json({ error: 'paths parameter is required' }, 400)
+    }
+
+    const paths = pathsParam.split(',').filter(Boolean)
+    const results: { path: string; name: string; content: string }[] = []
+
+    for (const filePath of paths) {
+      const fullPath = path.join(config.root, filePath)
+      
+      if (!isAllowed(fullPath, config)) {
+        continue
+      }
+
+      try {
+        const stat = await fs.stat(fullPath)
+        if (stat.isFile()) {
+          const content = await fs.readFile(fullPath, 'utf-8')
+          results.push({
+            path: filePath,
+            name: path.basename(filePath),
+            content,
+          })
+        }
+      } catch (e) {
+        // skip files that can't be read
+      }
+    }
+
+    return c.json({ files: results })
+  })
+
   router.get('/*', async (c) => {
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
     const fullPath = path.join(config.root, filePath)

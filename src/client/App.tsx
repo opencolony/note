@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
-import { Plus, Code, Eye, List, FileText, Folder } from 'lucide-react'
+import { Plus, Code, Eye, List, FileText, Folder, Search } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { FileTree } from './components/FileTree'
 import { TipTapEditor } from './components/TipTapEditor'
 import { CreateFileModal } from './components/CreateFileModal'
+import { SearchDialog } from './components/SearchDialog'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
 import { cn } from './lib/utils'
@@ -28,6 +29,7 @@ interface SidebarContentProps {
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
+  onSearchOpen?: () => void
 }
 
 const SidebarContent = memo(function SidebarContent({
@@ -42,12 +44,16 @@ const SidebarContent = memo(function SidebarContent({
   editingType,
   onEditingChange,
   onCreateSubmit,
+  onSearchOpen,
 }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <span className="font-semibold text-sm">ColonyDoc</span>
         <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={onSearchOpen} title="搜索">
+            <Search className="size-4" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => onEditingChange?.('file')} title="新建文件">
             <FileText className="size-4" />
           </Button>
@@ -77,6 +83,7 @@ function App() {
   const [files, setFiles] = useState<FileNode[]>([])
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
@@ -111,6 +118,17 @@ function App() {
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchDialogOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   useEffect(() => {
@@ -258,6 +276,9 @@ function App() {
           <div className="flex-1 text-base font-semibold text-center truncate mx-4">
             {fileName || 'ColonyDoc'}
           </div>
+          <Button variant="ghost" size="icon" onClick={() => setSearchDialogOpen(true)}>
+            <Search className="size-5" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={handleToggleEditorMode} title={editorMode === 'wysiwyg' ? '源码模式' : '所见即所得'}>
             {editorMode === 'wysiwyg' ? <Code className="size-5" /> : <Eye className="size-5" />}
           </Button>
@@ -288,6 +309,7 @@ function App() {
                 editingType={editingType}
                 onEditingChange={handleEditingChange}
                 onCreateSubmit={handleCreateSubmit}
+                onSearchOpen={() => setSearchDialogOpen(true)}
               />
             </aside>
           </>
@@ -307,6 +329,7 @@ function App() {
               editingType={editingType}
               onEditingChange={handleEditingChange}
               onCreateSubmit={handleCreateSubmit}
+              onSearchOpen={() => setSearchDialogOpen(true)}
             />
           </aside>
         )}
@@ -371,6 +394,13 @@ function App() {
         onCreate={handleCreateFile}
         currentDir={currentDir}
         files={files}
+      />
+
+      <SearchDialog
+        open={searchDialogOpen}
+        onOpenChange={setSearchDialogOpen}
+        files={files}
+        onSelect={(path) => handleSelectFile(path, 'file')}
       />
     </div>
   )
