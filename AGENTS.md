@@ -31,6 +31,14 @@ npm run typecheck
 
 **Note:** There is no testing framework or linting configured. Run `npm run typecheck` before committing to catch type errors.
 
+## Completing Work
+
+After completing a feature or bug fix:
+1. Run `npm run typecheck` to verify there are no type errors
+2. Ask the user if the work is complete and acceptable
+3. If the user confirms acceptance, commit the changes and push to remote
+4. If the user requests changes, make the requested modifications
+
 ## Mobile-First Design (Critical)
 
 This project is **mobile-first**. All UI must be designed for mobile screens first, then enhanced for desktop.
