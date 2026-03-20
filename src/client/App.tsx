@@ -393,7 +393,6 @@ function App() {
         onClose={() => setCreateModalVisible(false)}
         onCreate={handleCreateFile}
         currentDir={currentDir}
-        files={files}
       />
 
       <SearchDialog
