@@ -59,7 +59,8 @@ async function main() {
 
   setupWatcher(config, {
     onFileChange: (event, filePath) => {
-      const message = JSON.stringify({ type: 'file:change', event, path: filePath })
+      const relativePath = filePath.replace(config.root, '')
+      const message = JSON.stringify({ type: 'file:change', event, path: relativePath })
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message)

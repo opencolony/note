@@ -2,12 +2,23 @@ import { useState, useCallback, useEffect, useRef, memo } from 'react'
 import { Plus, Code, Eye, List, FileText, Folder, Search, X } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
+import { useSearch } from './hooks/useSearch'
 import { FileTree } from './components/FileTree'
 import { TipTapEditor } from './components/TipTapEditor'
 import { CreateFileModal } from './components/CreateFileModal'
 import { SearchDialog } from './components/SearchDialog'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './components/ui/alert-dialog'
 import { cn } from './lib/utils'
 
 interface FileNode {
@@ -101,6 +112,8 @@ function App() {
   const [currentDir, setCurrentDir] = useState('')
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
   const [editingType, setEditingType] = useState<'file' | 'directory' | null>(null)
+  const [refreshDialogOpen, setRefreshDialogOpen] = useState(false)
+  const [pendingExternalChange, setPendingExternalChange] = useState<string | null>(null)
 
   const [isSaving, setIsSaving] = useState(false)
   const fetchingRef = useRef(false)
@@ -121,6 +134,8 @@ function App() {
       console.error(e)
     },
   })
+
+  const { updateIndex, removeFromIndex } = useSearch()
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -176,9 +191,31 @@ function App() {
 
   useWebSocket(useCallback((data) => {
     if (data.type === 'file:change' && !isSaving) {
+      const changedPath = data.path
+      if (!changedPath) return
+
+      if (path && changedPath === path) {
+        setPendingExternalChange(changedPath)
+        setRefreshDialogOpen(true)
+      }
+
+      if (data.event === 'unlink') {
+        removeFromIndex(changedPath)
+      } else {
+        fetch(`/api/files/content?paths=${encodeURIComponent(changedPath)}`)
+          .then(res => res.json())
+          .then(result => {
+            if (result.files && result.files[0]) {
+              const file = result.files[0]
+              updateIndex(file.path, file.name, file.content)
+            }
+          })
+          .catch(console.error)
+      }
+
       fetchFiles()
     }
-  }, [fetchFiles, isSaving]))
+  }, [fetchFiles, isSaving, path, updateIndex, removeFromIndex]))
 
   const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory') => {
     if (type === 'file') {
@@ -411,6 +448,32 @@ function App() {
         files={files}
         onSelect={(path) => handleSelectFile(path, 'file')}
       />
+
+      <AlertDialog open={refreshDialogOpen} onOpenChange={setRefreshDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>文件已更新</AlertDialogTitle>
+            <AlertDialogDescription>
+              当前文件已被外部修改。是否刷新内容？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setPendingExternalChange(null)
+            }}>
+              忽略
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (pendingExternalChange) {
+                load(pendingExternalChange)
+              }
+              setPendingExternalChange(null)
+            }}>
+              刷新
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
