@@ -94,12 +94,13 @@ npm start
 
 ## Tech Stack
 
-- **Backend**: Hono
-- **Frontend**: React, Vite
-- **UI Components**: Ant Design Mobile
-- **Markdown**: @ant-design/x-markdown
+- **Backend**: Hono, @hono/node-server, ws (WebSocket)
+- **Frontend**: React 18, Vite, Tailwind CSS v4
+- **UI Components**: shadcn/ui (Radix UI)
+- **Editor**: TipTap 3, Milkdown, tiptap-markdown
 - **Diagrams**: Mermaid
-- **Build Tool**: Vite
+- **LaTeX**: KaTeX
+- **Icons**: lucide-react
 
 ## License
 

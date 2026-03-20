@@ -94,12 +94,13 @@ npm start
 
 ## 技术栈
 
-- **后端**: Hono
-- **前端**: React, Vite
-- **UI 组件**: Ant Design Mobile
-- **Markdown**: @ant-design/x-markdown
+- **后端**: Hono, @hono/node-server, ws (WebSocket)
+- **前端**: React 18, Vite, Tailwind CSS v4
+- **UI 组件**: shadcn/ui (Radix UI)
+- **编辑器**: TipTap 3, Milkdown, tiptap-markdown
 - **图表**: Mermaid
-- **构建工具**: Vite
+- **LaTeX 公式**: KaTeX
+- **图标**: lucide-react
 
 ## 许可证
 
