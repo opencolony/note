@@ -88,5 +88,6 @@
     "tsx": "^4.21.0",
     "typescript": "^5.7.3",
     "vite": "^6.0.7"
-  }
+  },
+  "packageManager": "pnpm@9.15.4"
 }
