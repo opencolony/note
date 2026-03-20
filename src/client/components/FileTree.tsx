@@ -1,6 +1,7 @@
-import { memo, SetStateAction, useState } from 'react'
-import { ChevronRight, File, Folder, Trash2 } from 'lucide-react'
+import { memo, SetStateAction, useState, useRef, useEffect } from 'react'
+import { ChevronRight, File, Folder, Trash2, FileText } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
+import { Input } from './ui/input'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible'
 import {
   SidebarGroup,
@@ -37,21 +38,56 @@ interface FileTreeProps {
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory') => void
   onDelete: (path: string) => void
+  onExpand?: (path: string) => void
+  editingType?: 'file' | 'directory' | null
+  onEditingChange?: (type: 'file' | 'directory' | null) => void
+  onCreateSubmit?: (name: string, isDirectory: boolean) => void
 }
 
-function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete }: {
+function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onExpand, editingType, onEditingChange, onCreateSubmit, currentDir }: {
   node: FileNode
   activePath: string | null
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory') => void
   onDelete: (path: string) => void
+  onExpand?: (path: string) => void
+  editingType?: 'file' | 'directory' | null
+  onEditingChange?: (type: 'file' | 'directory' | null) => void
+  onCreateSubmit?: (name: string, isDirectory: boolean) => void
+  currentDir: string
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [editName, setEditName] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
   const isDirectory = node.type === 'directory'
   const isActive = node.path === activePath
   const isExpanded = expandedPaths.has(node.path)
   const hasChildren = isDirectory && node.children && node.children.length > 0
+  const isCurrentDir = editingType && node.path === currentDir
+
+  useEffect(() => {
+    if (isCurrentDir && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isCurrentDir])
+
+  const handleEditSubmit = () => {
+    if (editName.trim() && onCreateSubmit) {
+      onCreateSubmit(editName.trim(), editingType === 'directory')
+      setEditName('')
+      onEditingChange?.(null)
+    }
+  }
+
+  const handleEditBlur = () => {
+    if (editName.trim() && onCreateSubmit) {
+      handleEditSubmit()
+    } else {
+      setEditName('')
+      onEditingChange?.(null)
+    }
+  }
 
   if (!isDirectory) {
     return (
@@ -104,6 +140,9 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
         className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
         open={isExpanded}
         onOpenChange={(open) => {
+          if (open && onExpand) {
+            onExpand(node.path)
+          }
           setExpandedPaths((prev) => {
             const next = new Set(prev)
             if (open) {
@@ -172,8 +211,40 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
                 setExpandedPaths={setExpandedPaths}
                 onSelect={onSelect}
                 onDelete={onDelete}
+                onExpand={onExpand}
+                editingType={editingType}
+                onEditingChange={onEditingChange}
+                onCreateSubmit={onCreateSubmit}
+                currentDir={currentDir}
               />
             ))}
+            {editingType && node.path === currentDir && (
+              <SidebarMenuItem className="px-2">
+                <div className="flex items-center gap-2 py-1.5">
+                  {editingType === 'directory' ? (
+                    <Folder className="size-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <FileText className="size-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <Input
+                    placeholder={editingType === 'directory' ? '文件夹名称' : '文件名称'}
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleEditSubmit()
+                      } else if (e.key === 'Escape') {
+                        setEditName('')
+                        onEditingChange?.(null)
+                      }
+                    }}
+                    onBlur={handleEditBlur}
+                    className="h-7 text-sm"
+                    autoFocus
+                  />
+                </div>
+              </SidebarMenuItem>
+            )}
           </SidebarMenuSub>
         </CollapsibleContent>
       </Collapsible>
@@ -188,8 +259,51 @@ const EMPTY_STATE = (
   </div>
 )
 
-export const FileTree = memo(function FileTree({ files, activePath, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete }: FileTreeProps) {
-  if (files.length === 0) {
+export const FileTree = memo(function FileTree({ files, activePath, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onExpand, editingType, onEditingChange, onCreateSubmit }: FileTreeProps) {
+  const [editName, setEditName] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editingType && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [editingType])
+
+  const handleEditSubmit = () => {
+    if (editName.trim() && onCreateSubmit) {
+      onCreateSubmit(editName.trim(), editingType === 'directory')
+      setEditName('')
+      if (onEditingChange) {
+        onEditingChange(null)
+      }
+    }
+  }
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleEditSubmit()
+    } else if (e.key === 'Escape') {
+      setEditName('')
+      if (onEditingChange) {
+        onEditingChange(null)
+      }
+    }
+  }
+
+  const handleEditBlur = () => {
+    if (editName.trim() && onCreateSubmit) {
+      handleEditSubmit()
+    } else {
+      setEditName('')
+      if (onEditingChange) {
+        onEditingChange(null)
+      }
+    }
+  }
+
+  const displayPath = currentDir ? currentDir.split('/').filter(Boolean).join(' / ') : '根目录'
+
+  if (files.length === 0 && !editingType) {
     return (
       <div className="flex-1 overflow-y-auto">
         {EMPTY_STATE}
@@ -213,11 +327,41 @@ export const FileTree = memo(function FileTree({ files, activePath, currentDir, 
                   setExpandedPaths={setExpandedPaths}
                   onSelect={onSelect}
                   onDelete={onDelete}
+                  onExpand={onExpand}
+                  editingType={editingType}
+                  onEditingChange={onEditingChange}
+                  onCreateSubmit={onCreateSubmit}
+                  currentDir={currentDir}
                 />
               ))}
+              {editingType && currentDir === '' && (
+                <SidebarMenuItem className="sidebar-menu-item">
+                  <div className="flex items-center gap-2 px-2 py-1.5 w-full">
+                    {editingType === 'directory' ? (
+                      <Folder className="size-4 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <FileText className="size-4 shrink-0 text-muted-foreground" />
+                    )}
+                    <Input
+                      ref={inputRef}
+                      placeholder={editingType === 'directory' ? '文件夹名称' : '文件名称'}
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={handleEditKeyDown}
+                      onBlur={handleEditBlur}
+                      className="h-7 text-sm"
+                    />
+                  </div>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {editingType && (
+          <div className="px-4 py-2 text-xs text-muted-foreground border-t">
+            位置: {displayPath}
+          </div>
+        )}
       </div>
     </div>
   )

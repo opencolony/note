@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
-import { Plus, Code, Eye, List, FileText } from 'lucide-react'
+import { Plus, Code, Eye, List, FileText, Folder } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { FileTree } from './components/FileTree'
@@ -17,7 +17,6 @@ interface FileNode {
 }
 
 interface SidebarContentProps {
-  onCreateClick: () => void
   files: FileNode[]
   activePath: string | null
   currentDir: string
@@ -25,10 +24,13 @@ interface SidebarContentProps {
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory') => void
   onDelete: (path: string) => void
+  onExpand?: (path: string) => void
+  editingType?: 'file' | 'directory' | null
+  onEditingChange?: (type: 'file' | 'directory' | null) => void
+  onCreateSubmit?: (name: string, isDirectory: boolean) => void
 }
 
 const SidebarContent = memo(function SidebarContent({
-  onCreateClick,
   files,
   activePath,
   currentDir,
@@ -36,14 +38,21 @@ const SidebarContent = memo(function SidebarContent({
   setExpandedPaths,
   onSelect,
   onDelete,
+  onExpand,
+  editingType,
+  onEditingChange,
+  onCreateSubmit,
 }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <span className="font-semibold text-sm">ColonyDoc</span>
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={onCreateClick} title="新建">
-            <Plus className="size-4" />
+          <Button variant="ghost" size="icon" onClick={() => onEditingChange?.('file')} title="新建文件">
+            <FileText className="size-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => onEditingChange?.('directory')} title="新建文件夹">
+            <Folder className="size-4" />
           </Button>
         </div>
       </div>
@@ -55,6 +64,10 @@ const SidebarContent = memo(function SidebarContent({
         setExpandedPaths={setExpandedPaths}
         onSelect={onSelect}
         onDelete={onDelete}
+        onExpand={onExpand}
+        editingType={editingType}
+        onEditingChange={onEditingChange}
+        onCreateSubmit={onCreateSubmit}
       />
     </div>
   )
@@ -71,6 +84,7 @@ function App() {
   const [editorMode, setEditorMode] = useState<'wysiwyg' | 'source'>('wysiwyg')
   const [currentDir, setCurrentDir] = useState('')
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
+  const [editingType, setEditingType] = useState<'file' | 'directory' | null>(null)
 
   const [isSaving, setIsSaving] = useState(false)
   const fetchingRef = useRef(false)
@@ -151,6 +165,34 @@ function App() {
     }
   }, [load])
 
+  const handleExpand = useCallback((path: string) => {
+    setCurrentDir(path)
+  }, [])
+
+  const handleEditingChange = useCallback((type: 'file' | 'directory' | null) => {
+    setEditingType(type)
+  }, [])
+
+  const handleCreateSubmit = useCallback(async (name: string, isDirectory: boolean) => {
+    try {
+      const fileName = isDirectory ? name : `${name}.md`
+      await fetch('/api/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          type: 'create', 
+          parentPath: currentDir, 
+          name: fileName, 
+          isDirectory 
+        }),
+      })
+      setEditingType(null)
+      fetchFiles()
+    } catch (e) {
+      console.error('Failed to create:', e)
+    }
+  }, [currentDir, fetchFiles])
+
   useEffect(() => {
     const hash = decodeURIComponent(window.location.hash.slice(1))
     if (hash && loadingRef.current !== hash) {
@@ -170,7 +212,7 @@ function App() {
     }
   }, [fetchFiles])
 
-  const handleCreateFile = useCallback(async (name: string, isDirectory: boolean) => {
+  const handleCreateFile = useCallback(async (name: string, isDirectory: boolean, parentPath: string) => {
     try {
       const fileName = isDirectory ? name : `${name}.md`
       
@@ -179,7 +221,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           type: 'create', 
-          parentPath: currentDir, 
+          parentPath, 
           name: fileName, 
           isDirectory 
         }),
@@ -188,7 +230,7 @@ function App() {
     } catch (e) {
       console.error('Failed to create:', e)
     }
-  }, [currentDir, fetchFiles])
+  }, [fetchFiles])
 
   const handleSave = useCallback(() => {
     if (path && content) {
@@ -235,7 +277,6 @@ function App() {
               )}
             >
               <SidebarContent
-                onCreateClick={() => setCreateModalVisible(true)}
                 files={files}
                 activePath={path}
                 currentDir={currentDir}
@@ -243,6 +284,10 @@ function App() {
                 setExpandedPaths={setExpandedPaths}
                 onSelect={handleSelectFile}
                 onDelete={handleDeleteFile}
+                onExpand={handleExpand}
+                editingType={editingType}
+                onEditingChange={handleEditingChange}
+                onCreateSubmit={handleCreateSubmit}
               />
             </aside>
           </>
@@ -251,7 +296,6 @@ function App() {
         {!isMobile && (
           <aside className="hidden md:flex w-[260px] flex-col border-r border-border bg-sidebar">
             <SidebarContent
-              onCreateClick={() => setCreateModalVisible(true)}
               files={files}
               activePath={path}
               currentDir={currentDir}
@@ -259,6 +303,10 @@ function App() {
               setExpandedPaths={setExpandedPaths}
               onSelect={handleSelectFile}
               onDelete={handleDeleteFile}
+              onExpand={handleExpand}
+              editingType={editingType}
+              onEditingChange={handleEditingChange}
+              onCreateSubmit={handleCreateSubmit}
             />
           </aside>
         )}
@@ -322,6 +370,7 @@ function App() {
         onClose={() => setCreateModalVisible(false)}
         onCreate={handleCreateFile}
         currentDir={currentDir}
+        files={files}
       />
     </div>
   )
