@@ -546,6 +546,16 @@
 .tiptap-editor .tiptap table {
   @apply w-full border-collapse my-4;
   border: 1px solid var(--color-border);
+  table-layout: fixed;
+  width: 100% !important;
+  max-width: 100%;
+}
+
+@media (max-width: 767px) {
+  .tiptap-editor .tiptap table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .tiptap-editor .tiptap th,
@@ -553,6 +563,14 @@
   @apply px-4 py-2 text-left;
   border: 1px solid var(--color-border);
   min-width: 100px;
+}
+
+@media (max-width: 767px) {
+  .tiptap-editor .tiptap th,
+  .tiptap-editor .tiptap td {
+    min-width: 80px;
+    padding: 0.5rem;
+  }
 }
 
 .tiptap-editor .tiptap th {
