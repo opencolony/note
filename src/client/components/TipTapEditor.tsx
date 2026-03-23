@@ -191,6 +191,8 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly }: T
     extensions: [
       StarterKit.configure({
         codeBlock: false,
+        link: false,
+        underline: false,
       }),
       CustomCodeBlock,
       Placeholder.configure({
