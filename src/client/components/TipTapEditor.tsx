@@ -3,6 +3,17 @@ import StarterKit from '@tiptap/starter-kit'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Markdown } from 'tiptap-markdown'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableHeader } from '@tiptap/extension-table-header'
+import { TableCell } from '@tiptap/extension-table-cell'
+import { TaskList } from '@tiptap/extension-task-list'
+import { TaskItem } from '@tiptap/extension-task-item'
+import { Link } from '@tiptap/extension-link'
+import { Image } from '@tiptap/extension-image'
+import { Highlight } from '@tiptap/extension-highlight'
+import { Underline } from '@tiptap/extension-underline'
+import { Typography } from '@tiptap/extension-typography'
 import { common, createLowlight } from 'lowlight'
 import { useEffect, useRef, useState, useMemo, memo } from 'react'
 import mermaid from 'mermaid'
@@ -190,6 +201,25 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly }: T
         transformPastedText: true,
         transformCopiedText: true,
       }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      Link.configure({
+        openOnClick: false,
+      }),
+      Image,
+      Highlight.configure({
+        multicolor: true,
+      }),
+      Underline,
+      Typography,
     ],
     content: value,
     editable: !readOnly && mode === 'wysiwyg',

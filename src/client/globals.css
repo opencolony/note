@@ -343,6 +343,13 @@
   box-shadow: 0 4px 6px -1px oklch(0% 0 0 / 0.05), 0 2px 4px -2px oklch(0% 0 0 / 0.05);
 }
 
+@media (min-width: 768px) {
+  .code-block-wrapper {
+    width: 650px;
+    flex-shrink: 0;
+  }
+}
+
 .code-block-wrapper.selected {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px oklch(55% 0.22 264 / 0.2);
@@ -382,28 +389,57 @@
 
 /* Mermaid Preview Styles */
 .mermaid-preview {
-  @apply p-4 w-full;
-  min-height: 150px;
+  @apply w-full;
+  padding: 12px;
   background: linear-gradient(135deg, oklch(98% 0.01 264) 0%, oklch(96% 0.01 264) 100%);
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 767px) {
+  .mermaid-preview {
+    height: 300px;
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 768px) {
+  .mermaid-preview {
+    width: 650px;
+    height: 400px;
+    flex-shrink: 0;
+  }
 }
 
 .mermaid-preview > .react-transform-wrapper {
   position: relative;
   width: 100%;
+  flex: 1;
 }
 
 .mermaid-preview > .react-transform-wrapper > .react-transform-component {
   width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.mermaid-preview svg {
-  max-width: 100%;
-  height: auto;
+.mermaid-preview > .react-transform-wrapper > .react-transform-component > div {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+.mermaid-preview > .react-transform-wrapper > .react-transform-component > div svg {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+
 
 @media (min-width: 768px) {
   .mermaid-preview {
@@ -504,4 +540,100 @@
 
 .hljs-class .hljs-title {
   color: #6f42c1;
+}
+
+/* Table Styles */
+.tiptap-editor .tiptap table {
+  @apply w-full border-collapse my-4;
+  border: 1px solid var(--color-border);
+}
+
+.tiptap-editor .tiptap th,
+.tiptap-editor .tiptap td {
+  @apply px-4 py-2 text-left;
+  border: 1px solid var(--color-border);
+  min-width: 100px;
+}
+
+.tiptap-editor .tiptap th {
+  @apply font-bold bg-muted;
+  background: linear-gradient(180deg, oklch(96% 0.01 264) 0%, oklch(91% 0.01 264) 100%);
+}
+
+.tiptap-editor .tiptap td {
+  @apply bg-background;
+}
+
+.tiptap-editor .tiptap .selectedCell {
+  @apply bg-primary/10;
+}
+
+/* Task List Styles */
+.tiptap-editor .tiptap ul[data-type="taskList"] {
+  @apply list-none pl-0;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] li {
+  @apply flex items-start gap-2;
+  display: flex;
+  align-items: flex-start;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] li > label {
+  @apply flex-shrink-0 mt-0.5;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+  @apply w-4 h-4 rounded border-border cursor-pointer accent-primary;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] li > div {
+  @apply flex-1;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
+  @apply line-through text-muted-foreground;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] li > div p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] li > div {
+  @apply flex-1;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] li {
+  @apply mb-1;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] {
+  @apply my-2;
+}
+
+/* Highlight Styles */
+.tiptap-editor .tiptap mark {
+  @apply px-0.5 rounded;
+  background: linear-gradient(135deg, oklch(80% 0.18 84) 0%, oklch(85% 0.15 84) 100%);
+}
+
+/* Underline Styles */
+.tiptap-editor .tiptap u {
+  @apply underline underline-offset-2;
+}
+
+/* Image Styles */
+.tiptap-editor .tiptap img {
+  @apply max-w-full h-auto rounded-lg my-4;
+}
+
+.tiptap-editor .tiptap img.ProseMirror-selectednode {
+  @apply outline-2 outline-primary outline-offset-2;
+}
+
+/* Typography - Smart Quotes */
+.tiptap-editor .tiptap .is-empty::before {
+  content: attr(data-placeholder);
+  @apply float-left text-muted-foreground pointer-events-none h-0;
 }
