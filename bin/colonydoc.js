@@ -111,19 +111,14 @@ async function main() {
   })
 
   app.get('*', async (c) => {
-    return c.html(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ColonyDoc</title>
-  <link rel="stylesheet" href="/assets/index.css">
-</head>
-<body>
-  <div id="root"></div>
-  <script type="module" src="/assets/index.js"></script>
-</body>
-</html>`)
+    const indexPath = join(publicDir, 'index.html')
+    if (existsSync(indexPath)) {
+      const content = readFileSync(indexPath, 'utf-8')
+      return new Response(content, {
+        headers: { 'Content-Type': 'text/html' },
+      })
+    }
+    return c.notFound()
   })
 
   const server = serve({
