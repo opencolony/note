@@ -1,6 +1,6 @@
 {
   "name": "@opencolony/colonydoc",
-  "version": "1.0.0-alpha.9",
+  "version": "1.0.0-beta.1",
   "engines": {
     "node": ">=18"
   },
@@ -43,19 +43,19 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
-    "@milkdown/crepe": "^7.19.0",
-    "@milkdown/plugin-listener": "^7.19.0",
-    "@milkdown/prose": "^7.19.0",
-    "@milkdown/react": "^7.19.0",
-    "@milkdown/utils": "^7.19.0",
+    "@hono/node-server": "^1.19.11",
+    "@milkdown/crepe": "^7.19.2",
+    "@milkdown/plugin-listener": "^7.19.2",
+    "@milkdown/prose": "^7.19.2",
+    "@milkdown/react": "^7.19.2",
+    "@milkdown/utils": "^7.19.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/typography": "^0.5.19",
-    "@tailwindcss/vite": "^4.2.1",
+    "@tailwindcss/vite": "^4.2.2",
     "@tiptap/extension-code-block-lowlight": "^3.20.4",
     "@tiptap/extension-highlight": "^3.20.4",
     "@tiptap/extension-image": "^3.20.4",
@@ -76,8 +76,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "flexsearch": "^0.8.212",
-    "hono": "^4.6.14",
-    "katex": "^0.16.38",
+    "hono": "^4.12.9",
+    "katex": "^0.16.40",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.577.0",
     "markdown-extensions": "^2.0.0",
@@ -86,20 +86,20 @@
     "react-dom": "^18.3.1",
     "react-zoom-pan-pinch": "^3.7.0",
     "tailwind-merge": "^3.5.0",
-    "tailwindcss": "^4.2.1",
+    "tailwindcss": "^4.2.2",
     "tiptap-markdown": "^0.9.0",
-    "ws": "^8.18.0"
+    "ws": "^8.20.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.5",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "@types/ws": "^8.5.13",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@types/node": "^22.19.15",
+    "@types/react": "^18.3.28",
+    "@types/react-dom": "^18.3.7",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.7.0",
     "bumpp": "^11.0.1",
     "tsx": "^4.21.0",
-    "typescript": "^5.7.3",
-    "vite": "^6.0.7"
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1"
   },
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "pnpm@10.30.3"
 }
