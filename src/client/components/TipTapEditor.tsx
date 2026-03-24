@@ -33,6 +33,8 @@ interface TipTapEditorProps {
   mode: 'wysiwyg' | 'source'
   placeholder?: string
   readOnly?: boolean
+  path?: string | null
+  onLinkClick?: (path: string) => void
 }
 
 const MermaidZoom = memo(function MermaidZoom({ 
@@ -183,7 +185,7 @@ const CustomCodeBlock = CodeBlockLowlight.extend({
   },
 }).configure({ lowlight })
 
-export function TipTapEditor({ value, onChange, mode, placeholder, readOnly }: TipTapEditorProps) {
+export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, path, onLinkClick }: TipTapEditorProps) {
   const isInternalUpdateRef = useRef(false)
   const lastNotifiedValueRef = useRef<string>(value)
 
@@ -300,6 +302,59 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly }: T
       editor.setEditable(!readOnly && mode === 'wysiwyg')
     }
   }, [editor, readOnly, mode])
+
+  useEffect(() => {
+    if (!path || !onLinkClick) return
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      const anchor = target.closest('a')
+      if (!anchor) return
+
+      const editorContainer = document.querySelector('.tiptap-editor')
+      if (!editorContainer || !editorContainer.contains(anchor)) return
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      const href = anchor.getAttribute('href')
+      if (!href) return
+
+      if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:') || href.startsWith('#')) {
+        return
+      }
+
+      const currentDir = path.substring(0, path.lastIndexOf('/'))
+      let resolvedPath = href
+
+      if (href.startsWith('./')) {
+        resolvedPath = currentDir + href.slice(1)
+      } else if (href.startsWith('../')) {
+        let parentDir = currentDir
+        let relative = href.slice(3)
+        while (relative.startsWith('../')) {
+          const lastSlash = parentDir.lastIndexOf('/')
+          if (lastSlash <= 0) break
+          parentDir = parentDir.substring(0, lastSlash)
+          relative = relative.slice(3)
+        }
+        if (!relative.startsWith('../')) {
+          resolvedPath = parentDir + '/' + relative
+        } else {
+          resolvedPath = href
+        }
+      } else if (!href.startsWith('/')) {
+        resolvedPath = currentDir + '/' + href
+      }
+
+      resolvedPath = decodeURIComponent(resolvedPath)
+
+      onLinkClick(resolvedPath)
+    }
+
+    document.addEventListener('click', handleClick, true)
+    return () => document.removeEventListener('click', handleClick, true)
+  }, [path, onLinkClick])
 
   if (mode === 'source') {
     return (

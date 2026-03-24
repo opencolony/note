@@ -221,6 +221,19 @@ function App() {
 
   const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory') => {
     if (type === 'file') {
+      const parts = selectedPath.split('/').filter(Boolean)
+      const dirs: string[] = []
+      for (let i = 0; i < parts.length - 1; i++) {
+        dirs.push('/' + parts.slice(0, i + 1).join('/'))
+      }
+      if (dirs.length > 0) {
+        setExpandedPaths(prev => {
+          const next = new Set(prev)
+          dirs.forEach(d => next.add(d))
+          return next
+        })
+      }
+
       load(selectedPath)
       window.location.hash = selectedPath
       const dir = selectedPath.substring(0, selectedPath.lastIndexOf('/'))
@@ -449,6 +462,8 @@ function App() {
                     value={content}
                     onChange={updateContent}
                     mode={editorMode}
+                    path={path}
+                    onLinkClick={(linkPath) => handleSelectFile(linkPath, 'file')}
                   />
                 </div>
               </div>
