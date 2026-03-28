@@ -308,7 +308,7 @@ export const FileTree = memo(function FileTree({ files, activePath, currentDir, 
                 variant="ghost"
                 size="icon"
                 className="size-6"
-                onClick={() => onCreateRequest?.(false, currentDir || '')}
+                onClick={() => onCreateRequest?.(false, '')}
                 title="新建文件"
               >
                 <FileText className="size-4" />
@@ -317,7 +317,7 @@ export const FileTree = memo(function FileTree({ files, activePath, currentDir, 
                 variant="ghost"
                 size="icon"
                 className="size-6"
-                onClick={() => onCreateRequest?.(true, currentDir || '')}
+                onClick={() => onCreateRequest?.(true, '')}
                 title="新建文件夹"
               >
                 <Folder className="size-4" />
