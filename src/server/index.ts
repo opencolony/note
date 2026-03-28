@@ -7,6 +7,10 @@ import { setupWatcher } from './watcher.js'
 import { WebSocketServer, WebSocket } from 'ws'
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const clientDir = path.join(__dirname, '..', 'client')
 
 async function main() {
   const config = await loadConfig()
@@ -19,7 +23,7 @@ async function main() {
 
   app.get('/assets/*', async (c) => {
     const filePath = c.req.path.replace('/assets', '')
-    const fullPath = path.join(new URL('../client/assets', import.meta.url).pathname, filePath)
+    const fullPath = path.join(clientDir, 'assets', filePath)
     try {
       const content = fs.readFileSync(fullPath)
       const ext = path.extname(filePath)
@@ -31,7 +35,7 @@ async function main() {
   })
 
   app.get('/logo.png', async (c) => {
-    const fullPath = path.join(new URL('../client/logo.png', import.meta.url).pathname)
+    const fullPath = path.join(clientDir, 'logo.png')
     try {
       const content = fs.readFileSync(fullPath)
       return new Response(content, { headers: { 'Content-Type': 'image/png' } })
@@ -41,7 +45,7 @@ async function main() {
   })
 
   app.get('/favicon.ico', async (c) => {
-    const fullPath = path.join(new URL('../client/favicon.ico', import.meta.url).pathname)
+    const fullPath = path.join(clientDir, 'favicon.ico')
     try {
       const content = fs.readFileSync(fullPath)
       return new Response(content, { headers: { 'Content-Type': 'image/x-icon' } })
@@ -51,7 +55,7 @@ async function main() {
   })
 
   app.get('*', async (c) => {
-    const indexPath = path.join(new URL('../client', import.meta.url).pathname, 'index.html')
+    const indexPath = path.join(clientDir, 'index.html')
     try {
       const content = fs.readFileSync(indexPath, 'utf-8')
       return new Response(content, {

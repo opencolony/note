@@ -110,6 +110,24 @@ async function main() {
     return new Response(content, { headers: { 'Content-Type': contentType } })
   })
 
+  app.get('/logo.png', async (c) => {
+    const fullPath = join(publicDir, 'logo.png')
+    if (!existsSync(fullPath)) {
+      return c.notFound()
+    }
+    const content = readFileSync(fullPath)
+    return new Response(content, { headers: { 'Content-Type': 'image/png' } })
+  })
+
+  app.get('/favicon.ico', async (c) => {
+    const fullPath = join(publicDir, 'favicon.ico')
+    if (!existsSync(fullPath)) {
+      return c.notFound()
+    }
+    const content = readFileSync(fullPath)
+    return new Response(content, { headers: { 'Content-Type': 'image/x-icon' } })
+  })
+
   app.get('*', async (c) => {
     const indexPath = join(publicDir, 'index.html')
     if (existsSync(indexPath)) {
