@@ -77,6 +77,7 @@ const SidebarContent = memo(function SidebarContent({
               <X className="size-4" />
             </Button>
           )}
+          <img src="/logo.png" alt="logo" className="size-6 shrink-0" />
           <span className="font-semibold text-sm">ColonyNote</span>
         </div>
         <div className="flex gap-1">
