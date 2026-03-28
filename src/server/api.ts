@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import fs from 'fs/promises'
 import path from 'path'
 import type { ColonydocConfig } from '../config.js'
+import { saveUserConfig } from '../config.js'
 
 declare module 'hono' {
   interface ContextVariableMap {
@@ -33,7 +34,7 @@ async function walkDirectory(dir: string, config: ColonydocConfig): Promise<File
     const entries = await fs.readdir(dir, { withFileTypes: true })
     
     for (const entry of entries) {
-      if (entry.name.startsWith('.')) continue
+      if (!config.showHiddenFiles && entry.name.startsWith('.')) continue
       
       const fullPath = path.join(dir, entry.name)
       
@@ -70,6 +71,41 @@ async function walkDirectory(dir: string, config: ColonydocConfig): Promise<File
 
 export function createFileRouter(config: ColonydocConfig) {
   const router = new Hono()
+
+  router.get('/config', async (c) => {
+    return c.json({
+      showHiddenFiles: config.showHiddenFiles,
+      allowedExtensions: config.allowedExtensions,
+    })
+  })
+
+  router.patch('/config', async (c) => {
+    try {
+      const body = await c.req.json()
+      const allowedFields = ['showHiddenFiles', 'allowedExtensions']
+      const updates: { showHiddenFiles?: boolean; allowedExtensions?: string[] } = {}
+
+      for (const key of allowedFields) {
+        if (key in body) {
+          (updates as Record<string, unknown>)[key] = body[key]
+        }
+      }
+
+      saveUserConfig(config.root, updates)
+
+      if (typeof updates.showHiddenFiles === 'boolean') {
+        config.showHiddenFiles = updates.showHiddenFiles
+      }
+      if (Array.isArray(updates.allowedExtensions)) {
+        config.allowedExtensions = updates.allowedExtensions
+      }
+
+      return c.json({ success: true, config: { showHiddenFiles: config.showHiddenFiles, allowedExtensions: config.allowedExtensions } })
+    } catch (e) {
+      console.error('Failed to update config:', e)
+      return c.json({ error: 'Failed to update config' }, 500)
+    }
+  })
 
   router.get('/', async (c) => {
     try {

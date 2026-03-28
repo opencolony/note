@@ -8,7 +8,7 @@ export interface WatcherCallbacks {
 export function setupWatcher(config: ColonydocConfig, callbacks: WatcherCallbacks) {
   const watcher = chokidar.watch(config.root, {
     ignored: (path) => {
-      if (path.startsWith('.')) return true
+      if (!config.showHiddenFiles && path.includes('/.') || path.startsWith('.')) return true
       const ext = path.split('.').pop()?.toLowerCase() || ''
       if (ext && !config.allowedExtensions.includes('.' + ext) && !path.includes('/')) {
         return false

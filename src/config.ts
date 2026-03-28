@@ -7,6 +7,7 @@ export interface ColonydocConfig {
   port: number
   host: string
   allowedExtensions: string[]
+  showHiddenFiles: boolean
   theme: {
     default: 'light' | 'dark' | 'system'
   }
@@ -21,6 +22,7 @@ const defaultConfig: ColonydocConfig = {
   port: 5787,
   host: '0.0.0.0',
   allowedExtensions: markdownExtensions.map((ext) => `.${ext}`),
+  showHiddenFiles: false,
   theme: {
     default: 'system',
   },
@@ -59,9 +61,44 @@ export async function loadConfig(configPath?: string): Promise<ColonydocConfig> 
     }
   }
 
+  const userConfigPath = path.join(config.root, 'colonydoc.user.json')
+  if (fs.existsSync(userConfigPath)) {
+    try {
+      const userSettings = JSON.parse(fs.readFileSync(userConfigPath, 'utf-8'))
+      if (typeof userSettings.showHiddenFiles === 'boolean') {
+        config.showHiddenFiles = userSettings.showHiddenFiles
+      }
+      if (Array.isArray(userSettings.allowedExtensions)) {
+        config.allowedExtensions = userSettings.allowedExtensions
+      }
+    } catch (e) {
+      console.warn(`Failed to load user config from ${userConfigPath}:`, e)
+    }
+  }
+
   config.root = path.resolve(config.root)
 
   return config
+}
+
+export function saveUserConfig(root: string, settings: { showHiddenFiles?: boolean; allowedExtensions?: string[] }): void {
+  const userConfigPath = path.join(root, 'colonydoc.user.json')
+  try {
+    let userSettings: Record<string, unknown> = {}
+    if (fs.existsSync(userConfigPath)) {
+      userSettings = JSON.parse(fs.readFileSync(userConfigPath, 'utf-8'))
+    }
+    if (typeof settings.showHiddenFiles === 'boolean') {
+      userSettings.showHiddenFiles = settings.showHiddenFiles
+    }
+    if (Array.isArray(settings.allowedExtensions)) {
+      userSettings.allowedExtensions = settings.allowedExtensions
+    }
+    fs.writeFileSync(userConfigPath, JSON.stringify(userSettings, null, 2), 'utf-8')
+  } catch (e) {
+    console.error(`Failed to save user config to ${userConfigPath}:`, e)
+    throw e
+  }
 }
 
 export { defaultConfig }

@@ -24,6 +24,7 @@ export default defineConfig({
         ws: true,
       },
     },
+    allowedHosts: ['.yue.center']
   },
   build: {
     outDir: 'dist/client',

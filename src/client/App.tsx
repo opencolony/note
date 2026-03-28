@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
-import { Plus, Code, Eye, List, FileText, Folder, Search, X } from 'lucide-react'
+import { Plus, Code, Eye, List, FileText, Folder, Search, X, Settings } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { useSearch } from './hooks/useSearch'
@@ -9,6 +9,7 @@ import { CreateFileModal } from './components/CreateFileModal'
 import { SearchDialog } from './components/SearchDialog'
 import { RenameDialog } from './components/RenameDialog'
 import { MoveFileModal } from './components/MoveFileModal'
+import { SettingsDialog } from './components/SettingsDialog'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
 import {
@@ -45,6 +46,7 @@ interface SidebarContentProps {
   onEditingChange?: (type: 'file' | 'directory' | null) => void
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
   onSearchOpen?: () => void
+  onSettingsOpen?: () => void
   onClose?: () => void
 }
 
@@ -63,6 +65,7 @@ const SidebarContent = memo(function SidebarContent({
   onEditingChange,
   onCreateSubmit,
   onSearchOpen,
+  onSettingsOpen,
   onClose,
 }: SidebarContentProps) {
   return (
@@ -79,6 +82,9 @@ const SidebarContent = memo(function SidebarContent({
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" onClick={onSearchOpen} title="搜索">
             <Search className="size-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onSettingsOpen} title="设置">
+            <Settings className="size-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => onEditingChange?.('file')} title="新建文件">
             <FileText className="size-4" />
@@ -126,6 +132,7 @@ function App() {
   const [editingType, setEditingType] = useState<'file' | 'directory' | null>(null)
   const [refreshDialogOpen, setRefreshDialogOpen] = useState(false)
   const [pendingExternalChange, setPendingExternalChange] = useState<string | null>(null)
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
 
   const [isSaving, setIsSaving] = useState(false)
   const fetchingRef = useRef(false)
@@ -201,6 +208,14 @@ function App() {
 
   useEffect(() => {
     fetchFiles()
+  }, [fetchFiles])
+
+  useEffect(() => {
+    const handleConfigChanged = () => {
+      fetchFiles()
+    }
+    window.addEventListener('config-changed', handleConfigChanged)
+    return () => window.removeEventListener('config-changed', handleConfigChanged)
   }, [fetchFiles])
 
   useWebSocket(useCallback((data) => {
@@ -473,6 +488,7 @@ function App() {
                 onEditingChange={handleEditingChange}
                 onCreateSubmit={handleCreateSubmit}
                 onSearchOpen={() => setSearchDialogOpen(true)}
+                onSettingsOpen={() => setSettingsDialogOpen(true)}
                 onClose={() => setDrawerVisible(false)}
               />
             </aside>
@@ -502,6 +518,7 @@ function App() {
               onEditingChange={handleEditingChange}
               onCreateSubmit={handleCreateSubmit}
               onSearchOpen={() => setSearchDialogOpen(true)}
+              onSettingsOpen={() => setSettingsDialogOpen(true)}
             />
           </aside>
         )}
@@ -624,6 +641,11 @@ function App() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SettingsDialog
+        open={settingsDialogOpen}
+        onOpenChange={setSettingsDialogOpen}
+      />
     </div>
   )
 }
