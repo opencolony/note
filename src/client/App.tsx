@@ -319,13 +319,19 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const hash = decodeURIComponent(window.location.hash.slice(1))
-    if (hash && loadingRef.current !== hash) {
-      loadingRef.current = hash
-      load(hash)
-      const dir = hash.substring(0, hash.lastIndexOf('/'))
-      setCurrentDir(dir)
+    const handleHashChange = () => {
+      const hash = decodeURIComponent(window.location.hash.slice(1))
+      if (hash && loadingRef.current !== hash) {
+        loadingRef.current = hash
+        load(hash)
+        const dir = hash.substring(0, hash.lastIndexOf('/'))
+        setCurrentDir(dir)
+      }
     }
+
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
   }, [load])
 
   const handleDeleteFile = useCallback(async (filePath: string) => {
