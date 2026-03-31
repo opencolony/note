@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Settings } from "lucide-react"
+import { Settings, Moon, Sun, Monitor } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,8 @@ import {
 import { Button } from "./ui/button"
 import { Switch } from "./ui/switch"
 
+type ThemeMode = 'light' | 'dark' | 'system'
+
 interface SettingsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -18,15 +20,51 @@ interface SettingsDialogProps {
 interface SettingsState {
   showHiddenFiles: boolean
   allowedExtensions: string
+  themeMode: ThemeMode
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [settings, setSettings] = React.useState<SettingsState>({
     showHiddenFiles: false,
     allowedExtensions: '',
+    themeMode: 'system',
   })
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+
+  const getThemeMode = (): ThemeMode => {
+    const stored = localStorage.getItem('colonynote-theme')
+    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+      return stored
+    }
+    return 'system'
+  }
+
+  const setThemeMode = (mode: ThemeMode) => {
+    localStorage.setItem('colonynote-theme', mode)
+    
+    if (mode === 'system') {
+      localStorage.removeItem('colonynote-theme')
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    } else if (mode === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }
+
+  const applyTheme = () => {
+    const mode = getThemeMode()
+    setSettings(prev => ({ ...prev, themeMode: mode }))
+  }
+
+  React.useEffect(() => {
+    applyTheme()
+  }, [open])
 
   React.useEffect(() => {
     if (open) {
@@ -36,6 +74,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           setSettings({
             showHiddenFiles: data.showHiddenFiles ?? false,
             allowedExtensions: (data.allowedExtensions || []).join(','),
+            themeMode: getThemeMode(),
           })
           setError(null)
         })
@@ -90,6 +129,59 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         </DialogHeader>
 
         <div className="grid gap-6 py-4">
+          <div className="space-y-3">
+            <div className="text-sm font-medium leading-none">
+              主题
+            </div>
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setThemeMode('light')
+                  setSettings(prev => ({ ...prev, themeMode: 'light' }))
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm transition-colors ${
+                  settings.themeMode === 'light'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background hover:bg-accent hover:text-accent-foreground'
+                }`}
+              >
+                <Sun className="size-4" />
+                浅色
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setThemeMode('dark')
+                  setSettings(prev => ({ ...prev, themeMode: 'dark' }))
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm transition-colors ${
+                  settings.themeMode === 'dark'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background hover:bg-accent hover:text-accent-foreground'
+                }`}
+              >
+                <Moon className="size-4" />
+                深色
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setThemeMode('system')
+                  setSettings(prev => ({ ...prev, themeMode: 'system' }))
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm transition-colors ${
+                  settings.themeMode === 'system'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background hover:bg-accent hover:text-accent-foreground'
+                }`}
+              >
+                <Monitor className="size-4" />
+                跟随系统
+              </button>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <label htmlFor="show-hidden" className="text-sm font-medium leading-none">

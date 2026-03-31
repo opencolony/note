@@ -7,10 +7,35 @@
     <title>ColonyNote</title>
     <script>
       (function() {
-        var theme = localStorage.getItem('colonynote-theme');
-        if (theme === 'dark' || (theme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
+        function applyTheme() {
+          var theme = localStorage.getItem('colonynote-theme');
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else if (theme === 'light') {
+            document.documentElement.classList.remove('dark');
+          } else {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
+          }
         }
+        
+        applyTheme();
+        
+        window.addEventListener('storage', function(e) {
+          if (e.key === 'colonynote-theme') {
+            applyTheme();
+          }
+        });
+        
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+          var theme = localStorage.getItem('colonynote-theme');
+          if (!theme || theme === 'system') {
+            applyTheme();
+          }
+        });
       })();
     </script>
   </head>

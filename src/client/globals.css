@@ -801,3 +801,121 @@
   content: attr(data-placeholder);
   @apply float-left text-muted-foreground pointer-events-none h-0;
 }
+
+/* Dark Theme */
+.dark {
+  --color-background: oklch(15% 0 0);
+  --color-foreground: oklch(90% 0 0);
+  --color-card: oklch(18% 0 0);
+  --color-card-foreground: oklch(90% 0 0);
+  --color-popover: oklch(18% 0 0);
+  --color-popover-foreground: oklch(90% 0 0);
+  --color-primary: oklch(70% 0 0);
+  --color-primary-foreground: oklch(15% 0 0);
+  --color-secondary: oklch(25% 0 0);
+  --color-secondary-foreground: oklch(90% 0 0);
+  --color-muted: oklch(22% 0 0);
+  --color-muted-foreground: oklch(60% 0 0);
+  --color-accent: oklch(25% 0 0);
+  --color-accent-foreground: oklch(90% 0 0);
+  --color-destructive: oklch(60% 0.15 25);
+  --color-destructive-foreground: oklch(98% 0 0);
+  --color-border: oklch(30% 0 0);
+  --color-input: oklch(30% 0 0);
+  --color-ring: oklch(70% 0 0);
+  --color-sidebar: oklch(12% 0 0);
+  --color-sidebar-foreground: oklch(90% 0 0);
+  --color-sidebar-primary: oklch(70% 0 0);
+  --color-sidebar-primary-foreground: oklch(15% 0 0);
+  --color-sidebar-accent: oklch(25% 0 0);
+  --color-sidebar-accent-foreground: oklch(90% 0 0);
+  --color-sidebar-border: oklch(30% 0 0);
+  --color-sidebar-ring: oklch(70% 0 0);
+}
+
+/* Dark Theme - Code Syntax Highlighting (GitHub Dark) */
+.dark .hljs-comment,
+.dark .hljs-quote {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.dark .hljs-keyword,
+.dark .hljs-selector-tag {
+  color: #ff7b72;
+}
+
+.dark .hljs-string,
+.dark .hljs-attr {
+  color: #a5d6ff;
+}
+
+.dark .hljs-number,
+.dark .hljs-literal {
+  color: #79c0ff;
+}
+
+.dark .hljs-variable,
+.dark .hljs-template-variable {
+  color: #ffa657;
+}
+
+.dark .hljs-title,
+.dark .hljs-section {
+  color: #d2a8ff;
+}
+
+.dark .hljs-type,
+.dark .hljs-built_in {
+  color: #79c0ff;
+}
+
+.dark .hljs-attribute {
+  color: #d2a8ff;
+}
+
+.dark .hljs-regexp,
+.dark .hljs-link {
+  color: #a5d6ff;
+}
+
+.dark .hljs-symbol,
+.dark .hljs-bullet {
+  color: #79c0ff;
+}
+
+.dark .hljs-addition {
+  color: #aff5b4;
+  background-color: #033a16;
+}
+
+.dark .hljs-deletion {
+  color: #ffdcd7;
+  background-color: #67060c;
+}
+
+.dark .hljs-function .hljs-title,
+.dark .hljs-function .hljs-keyword {
+  color: #ff7b72;
+}
+
+.dark .hljs-class .hljs-title {
+  color: #d2a8ff;
+}
+
+/* Dark Theme - Code Block Background */
+.dark .code-block-wrapper {
+  background: linear-gradient(135deg, oklch(22% 0 0) 0%, oklch(18% 0 0) 100%);
+}
+
+.dark .mermaid-preview {
+  background: linear-gradient(135deg, oklch(22% 0 0) 0%, oklch(18% 0 0) 100%);
+}
+
+.dark .tiptap-editor .tiptap th {
+  background: linear-gradient(180deg, oklch(25% 0 0) 0%, oklch(20% 0 0) 100%);
+}
+
+.dark .tiptap-editor .tiptap mark {
+  background: linear-gradient(135deg, oklch(60% 0.15 50) 0%, oklch(65% 0.12 50) 100%);
+}
