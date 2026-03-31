@@ -20,6 +20,7 @@
               document.documentElement.classList.remove('dark');
             }
           }
+          window.dispatchEvent(new CustomEvent('theme-change'));
         }
         
         applyTheme();

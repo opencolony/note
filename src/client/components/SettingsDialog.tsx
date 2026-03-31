@@ -55,6 +55,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     } else {
       document.documentElement.classList.remove('dark')
     }
+    
+    window.dispatchEvent(new CustomEvent('theme-change'))
   }
 
   const applyTheme = () => {

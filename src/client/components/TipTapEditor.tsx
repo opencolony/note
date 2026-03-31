@@ -21,9 +21,11 @@ import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewP
 import { Maximize2 } from 'lucide-react'
 import { MermaidFullscreenDialog } from './MermaidFullscreenDialog'
 
+const isDarkMode = () => document.documentElement.classList.contains('dark')
+
 mermaid.initialize({
   startOnLoad: false,
-  theme: 'default',
+  theme: isDarkMode() ? 'dark' : 'default',
 })
 
 const lowlight = createLowlight(common)
@@ -43,9 +45,18 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
   const [svgContent, setSvgContent] = useState<string>('')
   const [error, setError] = useState<string>('')
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [themeKey, setThemeKey] = useState(0)
   
   const mermaidId = useMemo(() => `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, [])
   const mermaidSource = node.textContent
+
+  useEffect(() => {
+    const handleThemeChange = () => {
+      setThemeKey(prev => prev + 1)
+    }
+    window.addEventListener('theme-change', handleThemeChange)
+    return () => window.removeEventListener('theme-change', handleThemeChange)
+  }, [])
 
   useEffect(() => {
     if (!isMermaid) {
@@ -62,6 +73,16 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
 
     let cancelled = false
 
+    const updateMermaidTheme = () => {
+      const currentTheme = isDarkMode() ? 'dark' : 'default'
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: currentTheme,
+      })
+    }
+
+    updateMermaidTheme()
+    
     mermaid.render(mermaidId, mermaidSource)
       .then(({ svg }) => {
         if (!cancelled) {
@@ -79,7 +100,7 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
     return () => {
       cancelled = true
     }
-  }, [isMermaid, mermaidSource, mermaidId])
+  }, [isMermaid, mermaidSource, mermaidId, themeKey])
 
   return (
     <NodeViewWrapper className={`code-block-wrapper ${selected ? 'selected' : ''}`}>
