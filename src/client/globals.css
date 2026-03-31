@@ -292,6 +292,21 @@
   color: var(--color-foreground);
 }
 
+.tiptap-editor .tiptap h4 {
+  @apply text-lg font-semibold mb-2 mt-4 first:mt-0;
+  color: var(--color-foreground);
+}
+
+.tiptap-editor .tiptap h5 {
+  @apply text-base font-semibold mb-2 mt-4 first:mt-0;
+  color: var(--color-foreground);
+}
+
+.tiptap-editor .tiptap h6 {
+  @apply text-sm font-semibold mb-2 mt-4 first:mt-0;
+  color: var(--color-foreground);
+}
+
 .tiptap-editor .tiptap p {
   @apply mb-4 leading-relaxed text-[var(--color-foreground)];
 }
