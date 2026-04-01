@@ -557,10 +557,9 @@
 }
 
 .mermaid-fullscreen-content {
-  @apply flex items-center justify-center overflow-hidden relative;
+  @apply flex items-center justify-center overflow-hidden relative bg-background;
   flex: 1 1 auto;
   min-height: 200px;
-  background: linear-gradient(135deg, oklch(97% 0 0) 0%, oklch(93% 0 0) 100%);
 }
 
 .mermaid-fullscreen-chart {

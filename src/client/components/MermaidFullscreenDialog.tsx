@@ -6,9 +6,11 @@ import { Button } from '@/client/components/ui/button'
 import { cn } from '@/client/lib/utils'
 import mermaid from 'mermaid'
 
+const isDarkMode = () => document.documentElement.classList.contains('dark')
+
 mermaid.initialize({
   startOnLoad: false,
-  theme: 'default',
+  theme: isDarkMode() ? 'dark' : 'default',
 })
 
 interface MermaidFullscreenDialogProps {
@@ -64,6 +66,13 @@ export function MermaidFullscreenDialog({ source, open, onOpenChange }: MermaidF
     setError('')
     setScale(1)
     setPosition({ x: 0, y: 0 })
+
+    // Update mermaid theme based on current mode
+    const currentTheme = isDarkMode() ? 'dark' : 'default'
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: currentTheme,
+    })
 
     mermaid.render(mermaidIdRef.current, source)
       .then(({ svg }) => {
