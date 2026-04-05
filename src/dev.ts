@@ -4,6 +4,8 @@ import { cors } from 'hono/cors'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createServer } from 'http'
 import { serve } from '@hono/node-server'
+import fs from 'fs'
+import path from 'path'
 import { createFileRouter } from './server/api.js'
 import { setupWatcher } from './server/watcher.js'
 import { loadConfig } from './config.js'
@@ -13,6 +15,32 @@ async function main() {
   const config = await loadConfig()
   config.port = 5788
   config.root = process.cwd() + '/workspace'
+
+  const userConfigPath = path.join(config.root, 'colonynote.user.json')
+  if (fs.existsSync(userConfigPath)) {
+    try {
+      const userSettings = JSON.parse(fs.readFileSync(userConfigPath, 'utf-8'))
+      if (typeof userSettings.showHiddenFiles === 'boolean') {
+        config.showHiddenFiles = userSettings.showHiddenFiles
+      }
+      if (Array.isArray(userSettings.allowedExtensions)) {
+        config.allowedExtensions = userSettings.allowedExtensions
+      }
+      if (userSettings.ignore) {
+        if (typeof userSettings.ignore.enableIgnoreFiles === 'boolean') {
+          config.ignore.enableIgnoreFiles = userSettings.ignore.enableIgnoreFiles
+        }
+        if (Array.isArray(userSettings.ignore.ignoreFileNames)) {
+          config.ignore.ignoreFileNames = userSettings.ignore.ignoreFileNames
+        }
+        if (Array.isArray(userSettings.ignore.patterns)) {
+          config.ignore.patterns = userSettings.ignore.patterns
+        }
+      }
+    } catch (e) {
+      console.warn(`Failed to load user config from ${userConfigPath}:`, e)
+    }
+  }
 
   const matcher = new IgnoreMatcher(config.root, {
     enableIgnoreFiles: config.ignore.enableIgnoreFiles,
