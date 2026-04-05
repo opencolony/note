@@ -3,6 +3,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import type { ColonynoteConfig } from '../config.js'
 import { saveUserConfig } from '../config.js'
+import { IgnoreMatcher } from './ignore.js'
 
 declare module 'hono' {
   interface ContextVariableMap {
@@ -27,19 +28,21 @@ function hasAllowedExtension(filename: string, extensions: string[]): boolean {
   return extensions.includes(ext)
 }
 
-async function walkDirectory(dir: string, config: ColonynoteConfig): Promise<FileNode[]> {
+async function walkDirectory(dir: string, config: ColonynoteConfig, matcher: IgnoreMatcher): Promise<FileNode[]> {
   const nodes: FileNode[] = []
-  
+
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true })
-    
+
     for (const entry of entries) {
-      if (!config.showHiddenFiles && entry.name.startsWith('.')) continue
-      
       const fullPath = path.join(dir, entry.name)
-      
-      if (entry.isDirectory()) {
-        const children = await walkDirectory(fullPath, config)
+      const isDir = entry.isDirectory()
+
+      if (!config.showHiddenFiles && entry.name.startsWith('.')) continue
+      if (matcher.isIgnored(fullPath, isDir)) continue
+
+      if (isDir) {
+        const children = await walkDirectory(fullPath, config, matcher)
         nodes.push({
           name: entry.name,
           path: fullPath.replace(config.root, '').replace(/\\/g, '/'),
@@ -59,31 +62,32 @@ async function walkDirectory(dir: string, config: ColonynoteConfig): Promise<Fil
   } catch (e) {
     // ignore errors
   }
-  
+
   nodes.sort((a, b) => {
     if (a.type === 'directory' && b.type === 'file') return -1
     if (a.type === 'file' && b.type === 'directory') return 1
     return a.name.localeCompare(b.name)
   })
-  
+
   return nodes
 }
 
-export function createFileRouter(config: ColonynoteConfig) {
+export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatcher) {
   const router = new Hono()
 
   router.get('/config', async (c) => {
     return c.json({
       showHiddenFiles: config.showHiddenFiles,
       allowedExtensions: config.allowedExtensions,
+      ignore: config.ignore,
     })
   })
 
   router.patch('/config', async (c) => {
     try {
       const body = await c.req.json()
-      const allowedFields = ['showHiddenFiles', 'allowedExtensions']
-      const updates: { showHiddenFiles?: boolean; allowedExtensions?: string[] } = {}
+      const allowedFields = ['showHiddenFiles', 'allowedExtensions', 'ignore']
+      const updates: { showHiddenFiles?: boolean; allowedExtensions?: string[]; ignore?: { enableIgnoreFiles?: boolean; ignoreFileNames?: string[]; patterns?: string[] } } = {}
 
       for (const key of allowedFields) {
         if (key in body) {
@@ -99,8 +103,21 @@ export function createFileRouter(config: ColonynoteConfig) {
       if (Array.isArray(updates.allowedExtensions)) {
         config.allowedExtensions = updates.allowedExtensions
       }
+      if (updates.ignore) {
+        if (typeof updates.ignore.enableIgnoreFiles === 'boolean') {
+          config.ignore.enableIgnoreFiles = updates.ignore.enableIgnoreFiles
+        }
+        if (Array.isArray(updates.ignore.ignoreFileNames)) {
+          config.ignore.ignoreFileNames = updates.ignore.ignoreFileNames
+        }
+        if (Array.isArray(updates.ignore.patterns)) {
+          config.ignore.patterns = updates.ignore.patterns
+          matcher.updateGlobalPatterns(updates.ignore.patterns)
+        }
+        matcher.clearCache()
+      }
 
-      return c.json({ success: true, config: { showHiddenFiles: config.showHiddenFiles, allowedExtensions: config.allowedExtensions } })
+      return c.json({ success: true, config: { showHiddenFiles: config.showHiddenFiles, allowedExtensions: config.allowedExtensions, ignore: config.ignore } })
     } catch (e) {
       console.error('Failed to update config:', e)
       return c.json({ error: 'Failed to update config' }, 500)
@@ -109,7 +126,7 @@ export function createFileRouter(config: ColonynoteConfig) {
 
   router.get('/', async (c) => {
     try {
-      const files = await walkDirectory(config.root, config)
+      const files = await walkDirectory(config.root, config, matcher)
       return c.json({ files })
     } catch (e) {
       return c.json({ error: 'Failed to read directory' }, 500)
@@ -161,7 +178,7 @@ export function createFileRouter(config: ColonynoteConfig) {
     try {
       const stat = await fs.stat(fullPath)
       if (stat.isDirectory()) {
-        const files = await walkDirectory(fullPath, config)
+        const files = await walkDirectory(fullPath, config, matcher)
         return c.json({ files })
       }
     } catch (e) {

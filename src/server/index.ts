@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { createFileRouter } from './api.js'
 import { loadConfig } from '../config.js'
 import { setupWatcher } from './watcher.js'
+import { IgnoreMatcher } from './ignore.js'
 import { WebSocketServer, WebSocket } from 'ws'
 import fs from 'fs'
 import path from 'path'
@@ -15,10 +16,16 @@ const clientDir = path.join(__dirname, '..', 'client')
 async function main() {
   const config = await loadConfig()
 
+  const matcher = new IgnoreMatcher(config.root, {
+    enableIgnoreFiles: config.ignore.enableIgnoreFiles,
+    ignoreFileNames: config.ignore.ignoreFileNames,
+    globalPatterns: config.ignore.patterns,
+  })
+
   const app = new Hono()
   app.use('*', cors())
 
-  const fileRouter = createFileRouter(config)
+  const fileRouter = createFileRouter(config, matcher)
   app.route('/api/files', fileRouter)
 
   app.get('/assets/*', async (c) => {
@@ -88,8 +95,8 @@ async function main() {
     }
   })
 
-  setupWatcher(config, {
-    onFileChange: (event, filePath) => {
+  setupWatcher(config, matcher, {
+    onFileChange: (event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', filePath: string) => {
       const relativePath = filePath.replace(config.root, '')
       const message = JSON.stringify({ type: 'file:change', event, path: relativePath })
       clients.forEach((client) => {

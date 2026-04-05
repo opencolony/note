@@ -1,16 +1,26 @@
 import chokidar from 'chokidar'
+import fs from 'fs'
 import type { ColonynoteConfig } from '../config.js'
+import { IgnoreMatcher } from './ignore.js'
 
 export interface WatcherCallbacks {
   onFileChange: (event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', path: string) => void
 }
 
-export function setupWatcher(config: ColonynoteConfig, callbacks: WatcherCallbacks) {
+export function setupWatcher(config: ColonynoteConfig, matcher: IgnoreMatcher, callbacks: WatcherCallbacks) {
   const watcher = chokidar.watch(config.root, {
-    ignored: (path) => {
-      if (!config.showHiddenFiles && path.includes('/.') || path.startsWith('.')) return true
-      const ext = path.split('.').pop()?.toLowerCase() || ''
-      if (ext && !config.allowedExtensions.includes('.' + ext) && !path.includes('/')) {
+    ignored: (filePath: string) => {
+      if (!config.showHiddenFiles && (filePath.includes('/.') || filePath.startsWith('.'))) return true
+
+      try {
+        const stat = fs.statSync(filePath)
+        if (matcher.isIgnored(filePath, stat.isDirectory())) return true
+      } catch {
+        if (matcher.isIgnored(filePath, false)) return true
+      }
+
+      const ext = filePath.split('.').pop()?.toLowerCase() || ''
+      if (ext && !config.allowedExtensions.includes('.' + ext) && !filePath.includes('/')) {
         return false
       }
       return false
