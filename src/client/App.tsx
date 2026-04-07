@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
-import { Plus, Code, Eye, List, FileText, Folder, Search, X, Settings } from 'lucide-react'
+import { Plus, Code, Eye, List, FileText, Folder, Search, X, Settings, GripVertical } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { useSearch } from './hooks/useSearch'
@@ -128,6 +128,12 @@ function App() {
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
 
   const [isSaving, setIsSaving] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    if (typeof window === 'undefined') return 260
+    const saved = localStorage.getItem('sidebar-width')
+    return saved ? parseInt(saved, 10) : 260
+  })
+  const isResizingRef = useRef(false)
   const fetchingRef = useRef(false)
   const loadingRef = useRef<string | null>(null)
   // 用于跟踪自己发起的保存会话，避免在网络差时误判为外部修改
@@ -499,6 +505,38 @@ function App() {
     setEditorMode(prev => prev === 'wysiwyg' ? 'source' : 'wysiwyg')
   }, [])
 
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isResizingRef.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [])
+
+  useEffect(() => {
+    const handleResizeMove = (e: MouseEvent) => {
+      if (!isResizingRef.current) return
+      const newWidth = Math.max(200, Math.min(600, e.clientX))
+      setSidebarWidth(newWidth)
+    }
+
+    const handleResizeEnd = () => {
+      if (isResizingRef.current) {
+        isResizingRef.current = false
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+        localStorage.setItem('sidebar-width', sidebarWidth.toString())
+      }
+    }
+
+    window.addEventListener('mousemove', handleResizeMove)
+    window.addEventListener('mouseup', handleResizeEnd)
+
+    return () => {
+      window.removeEventListener('mousemove', handleResizeMove)
+      window.removeEventListener('mouseup', handleResizeEnd)
+    }
+  }, [sidebarWidth])
+
   const fileName = path ? path.split('/').pop() : null
 
   useEffect(() => {
@@ -565,8 +603,9 @@ function App() {
         )}
 
         {!isMobile && (
-          <aside className="hidden md:flex w-[260px] flex-col border-r border-border bg-sidebar">
-            <SidebarContent
+          <div className="hidden md:flex shrink-0">
+            <aside style={{ width: sidebarWidth }} className="flex flex-col border-r border-border bg-sidebar">
+              <SidebarContent
               files={files}
               activePath={path}
               currentDir={currentDir}
@@ -589,7 +628,15 @@ function App() {
               onCreateRequest={handleCreateRequest}
               onSettingsOpen={() => setSettingsDialogOpen(true)}
             />
-          </aside>
+            </aside>
+            <div
+              onMouseDown={handleResizeStart}
+              className="w-4 -ml-2 cursor-col-resize flex items-center justify-center group z-10"
+              title="拖动调整侧边栏宽度"
+            >
+              <div className="w-1 h-8 rounded-full bg-border group-hover:bg-primary/50 transition-colors" />
+            </div>
+          </div>
         )}
 
         <main className="flex-1 flex flex-col overflow-hidden">
