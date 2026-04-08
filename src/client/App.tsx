@@ -417,7 +417,8 @@ function App() {
           type: 'create', 
           parentPath: currentDir, 
           name: fileName, 
-          isDirectory 
+          isDirectory,
+          root: activeRoot 
         }),
       })
       setEditingType(null)
@@ -425,7 +426,7 @@ function App() {
     } catch (e) {
       console.error('Failed to create:', e)
     }
-  }, [currentDir, fetchFiles])
+  }, [activeRoot, currentDir, fetchFiles])
 
   const handleCreateRequest = useCallback((isDirectory: boolean, parentPath: string) => {
     setEditingType(isDirectory ? 'directory' : 'file')
@@ -483,7 +484,10 @@ function App() {
 
   const handleDeleteFile = useCallback(async (filePath: string) => {
     try {
-      await fetch(`/api/files${filePath}`, { method: 'DELETE' })
+      const url = activeRoot
+        ? `/api/files${filePath}?root=${encodeURIComponent(activeRoot)}`
+        : `/api/files${filePath}`
+      await fetch(url, { method: 'DELETE' })
       if (path && (path === filePath || path.startsWith(filePath + '/'))) {
         loadingRef.current = null
         window.location.hash = ''
@@ -496,7 +500,7 @@ function App() {
     } catch (e) {
       console.error('Failed to delete:', e)
     }
-  }, [fetchFiles, path])
+  }, [fetchFiles, path, activeRoot])
 
   const handleRename = useCallback(async (filePath: string, newName: string) => {
     try {
@@ -514,6 +518,8 @@ function App() {
           oldPath,
           newPath,
           isDirectory,
+          sourceRoot: activeRoot,
+          targetRoot: activeRoot,
         }),
       })
 
@@ -544,6 +550,8 @@ function App() {
           oldPath,
           newPath,
           isDirectory,
+          sourceRoot: activeRoot,
+          targetRoot: activeRoot,
         }),
       })
 
@@ -558,7 +566,7 @@ function App() {
     } catch (e) {
       console.error('Failed to move:', e)
     }
-  }, [path, load, fetchFiles])
+  }, [path, load, fetchFiles, activeRoot])
 
   const handleCopy = useCallback(async (sourcePath: string, targetPath: string) => {
     try {
@@ -587,14 +595,15 @@ function App() {
           type: 'create', 
           parentPath, 
           name: fileName, 
-          isDirectory 
+          isDirectory,
+          root: activeRoot 
         }),
       })
       fetchFiles()
     } catch (e) {
       console.error('Failed to create:', e)
     }
-  }, [fetchFiles])
+  }, [activeRoot, fetchFiles])
 
   const handleSave = useCallback(() => {
     if (path && content) {
