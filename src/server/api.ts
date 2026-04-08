@@ -403,10 +403,63 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
   })
 
+  router.post('/copy', async (c) => {
+    try {
+      const body = await c.req.json()
+      let { sourcePath, targetPath, sourceRoot, targetRoot } = body
+
+      if (!sourcePath || !targetPath) {
+        return c.json({ error: 'sourcePath and targetPath required' }, 400)
+      }
+
+      if (!sourceRoot || !targetRoot) {
+        return c.json({ error: 'sourceRoot and targetRoot required' }, 400)
+      }
+
+      const validatedSourceRoot = validateRoot(sourceRoot, config)
+      const validatedTargetRoot = validateRoot(targetRoot, config)
+      if (!validatedSourceRoot) return c.json({ error: 'Invalid source root' }, 400)
+      if (!validatedTargetRoot) return c.json({ error: 'Invalid target root' }, 400)
+
+      const srcFullPath = path.join(validatedSourceRoot, sourcePath)
+      let tgtFullPath = path.join(validatedTargetRoot, targetPath)
+
+      const stat = await fs.stat(srcFullPath)
+
+      const targetExists = await fs.access(tgtFullPath).then(() => true).catch(() => false)
+      if (targetExists) {
+        const ext = path.extname(targetPath)
+        const base = path.basename(targetPath, ext)
+        const dir = path.dirname(targetPath)
+        targetPath = `${dir}/${base} (copy)${ext}`
+        tgtFullPath = path.join(validatedTargetRoot, targetPath)
+      }
+
+      if (stat.isDirectory()) {
+        await fs.cp(srcFullPath, tgtFullPath, { recursive: true })
+      } else {
+        await fs.copyFile(srcFullPath, tgtFullPath)
+      }
+
+      return c.json({ success: true, newPath: targetPath })
+    } catch (e) {
+      console.error('Copy error:', e)
+      return c.json({ error: 'Failed to copy' }, 500)
+    }
+  })
+
   router.post('/*', async (c) => {
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
-    const rootPath = findRootForPath(filePath, config)
-    if (!rootPath) return c.json({ error: 'Access denied' }, 403)
+    const rootParam = c.req.query('root')
+    let rootPath: string | null
+
+    if (rootParam) {
+      rootPath = validateRoot(rootParam, config)
+      if (!rootPath) return c.json({ error: 'Invalid root' }, 400)
+    } else {
+      rootPath = findRootForPath(filePath, config)
+      if (!rootPath) return c.json({ error: 'Access denied' }, 403)
+    }
     const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
     const fullPath = path.join(rootPath, relativePath)
 
@@ -523,51 +576,6 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     } catch (e) {
       console.error('Rename/Move error:', e)
       return c.json({ error: 'Failed to rename or move' }, 500)
-    }
-  })
-
-  router.post('/copy', async (c) => {
-    try {
-      const body = await c.req.json()
-      let { sourcePath, targetPath, sourceRoot, targetRoot } = body
-
-      if (!sourcePath || !targetPath) {
-        return c.json({ error: 'sourcePath and targetPath required' }, 400)
-      }
-
-      if (!sourceRoot || !targetRoot) {
-        return c.json({ error: 'sourceRoot and targetRoot required' }, 400)
-      }
-
-      const validatedSourceRoot = validateRoot(sourceRoot, config)
-      const validatedTargetRoot = validateRoot(targetRoot, config)
-      if (!validatedSourceRoot) return c.json({ error: 'Invalid source root' }, 400)
-      if (!validatedTargetRoot) return c.json({ error: 'Invalid target root' }, 400)
-
-      const srcFullPath = path.join(validatedSourceRoot, sourcePath)
-      let tgtFullPath = path.join(validatedTargetRoot, targetPath)
-
-      const stat = await fs.stat(srcFullPath)
-
-      const targetExists = await fs.access(tgtFullPath).then(() => true).catch(() => false)
-      if (targetExists) {
-        const ext = path.extname(targetPath)
-        const base = path.basename(targetPath, ext)
-        const dir = path.dirname(targetPath)
-        targetPath = `${dir}/${base} (copy)${ext}`
-        tgtFullPath = path.join(validatedTargetRoot, targetPath)
-      }
-
-      if (stat.isDirectory()) {
-        await fs.cp(srcFullPath, tgtFullPath, { recursive: true })
-      } else {
-        await fs.copyFile(srcFullPath, tgtFullPath)
-      }
-
-      return c.json({ success: true, newPath: targetPath })
-    } catch (e) {
-      console.error('Copy error:', e)
-      return c.json({ error: 'Failed to copy' }, 500)
     }
   })
 
