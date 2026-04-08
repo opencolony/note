@@ -555,12 +555,11 @@ function App() {
     }
   }, [path, load, fetchFiles])
 
-  const handleMove = useCallback(async (oldPath: string, newParentPath: string) => {
+  const handleMove = useCallback(async (oldPath: string, newPath: string, sourceRoot: string, targetRoot: string) => {
     try {
       const fileName = oldPath.split('/').pop() || ''
       const oldParentPath = oldPath.substring(0, oldPath.lastIndexOf('/'))
       const isDirectory = !fileName.includes('.')
-      const newPath = newParentPath ? `${newParentPath}/${fileName}` : `/${fileName}`
 
       await fetch('/api/files', {
         method: 'PUT',
@@ -569,8 +568,8 @@ function App() {
           oldPath,
           newPath,
           isDirectory,
-          sourceRoot: activeRoot,
-          targetRoot: activeRoot,
+          sourceRoot,
+          targetRoot,
         }),
       })
 
@@ -579,13 +578,13 @@ function App() {
         loadingRef.current = null
         window.location.hash = updatedPath
         load(updatedPath)
-        setCurrentDir(newParentPath ? newParentPath : '')
+        setCurrentDir(newPath.substring(0, newPath.lastIndexOf('/')))
       }
       fetchFiles()
     } catch (e) {
       console.error('Failed to move:', e)
     }
-  }, [path, load, fetchFiles, activeRoot])
+  }, [path, load, fetchFiles])
 
   const handleCopy = useCallback(async (sourcePath: string, targetPath: string, sourceRoot: string, targetRoot: string) => {
     try {
@@ -875,11 +874,11 @@ function App() {
         open={moveModalOpen}
         onOpenChange={setMoveModalOpen}
         item={moveItem}
-        files={allFiles}
-        onMove={(oldPath, newParentPath) => {
+        groups={fileGroups}
+        onMove={(oldPath, newPath, sourceRoot, targetRoot) => {
           setMoveItem(null)
           setMoveModalOpen(false)
-          handleMove(oldPath, newParentPath)
+          handleMove(oldPath, newPath, sourceRoot, targetRoot)
         }}
       />
 

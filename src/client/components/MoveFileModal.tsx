@@ -19,12 +19,18 @@ interface FileNode {
   children?: FileNode[]
 }
 
+interface FileGroup {
+  root: { path: string; exclude?: string[] }
+  files: FileNode[]
+  error?: string
+}
+
 interface MoveFileModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   item: { path: string; name: string; type: 'file' | 'directory' } | null
-  files: FileNode[]
-  onMove: (oldPath: string, newParentPath: string) => void
+  groups: FileGroup[]
+  onMove: (oldPath: string, newParentPath: string, sourceRoot: string, targetRoot: string) => void
 }
 
 interface TreeNodeSelectProps {
@@ -34,6 +40,7 @@ interface TreeNodeSelectProps {
   expandedPaths: Set<string>
   onToggleExpand: (path: string) => void
   currentItemPath: string
+  rootPath: string
 }
 
 function TreeNodeSelect({
@@ -43,6 +50,7 @@ function TreeNodeSelect({
   expandedPaths,
   onToggleExpand,
   currentItemPath,
+  rootPath,
 }: TreeNodeSelectProps) {
   if (node.type !== 'directory') return null
 
@@ -88,16 +96,17 @@ function TreeNodeSelect({
       {isExpanded && hasChildren && (
         <div className="ml-4">
           {node.children!.map((child) => (
-            <TreeNodeSelect
-              key={child.path}
-              node={child}
-              selectedPath={selectedPath}
-              onSelect={onSelect}
-              expandedPaths={expandedPaths}
-              onToggleExpand={onToggleExpand}
-              currentItemPath={currentItemPath}
-            />
-          ))}
+              <TreeNodeSelect
+                key={child.path}
+                node={child}
+                selectedPath={selectedPath}
+                onSelect={onSelect}
+                expandedPaths={expandedPaths}
+                onToggleExpand={onToggleExpand}
+                currentItemPath={currentItemPath}
+                rootPath={rootPath}
+              />
+            ))}
         </div>
       )}
     </div>
@@ -108,18 +117,21 @@ export function MoveFileModal({
   open,
   onOpenChange,
   item,
-  files,
+  groups,
   onMove,
 }: MoveFileModalProps) {
   const [selectedPath, setSelectedPath] = useState<string | null>('')
+  const [selectedRoot, setSelectedRoot] = useState<string | null>(null)
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (item && open) {
       const parentPath = item.path.substring(0, item.path.lastIndexOf('/'))
       setSelectedPath(parentPath || '/')
+      const itemRoot = groups.find(g => item.path.startsWith(g.root.path))
+      setSelectedRoot(itemRoot?.root.path || groups[0]?.root.path || null)
     }
-  }, [item, open])
+  }, [item, open, groups])
 
   const handleToggleExpand = (path: string) => {
     setExpandedPaths((prev) => {
@@ -134,16 +146,23 @@ export function MoveFileModal({
   }
 
   const handleMove = () => {
-    if (item && selectedPath !== null) {
-      const oldParentPath = item.path.substring(0, item.path.lastIndexOf('/'))
-      if (selectedPath !== oldParentPath) {
-        onMove(item.path, selectedPath === '/' ? '' : selectedPath)
+    if (item && selectedPath !== null && selectedRoot !== null) {
+      const fileName = item.path.split('/').pop() || ''
+      const targetPath = selectedPath === '/' 
+        ? `${selectedRoot}/${fileName}` 
+        : `${selectedPath}/${fileName}`
+      const sourceRoot = groups.find(g => item.path.startsWith(g.root.path))?.root.path || ''
+      if (targetPath !== item.path) {
+        onMove(item.path, targetPath, sourceRoot, selectedRoot)
       }
       onOpenChange(false)
     }
   }
 
   if (!item) return null
+
+  const activeGroup = groups.find(g => g.root.path === selectedRoot)
+  const files = activeGroup?.files || []
 
   const displayPath = selectedPath
     ? selectedPath === '/'
@@ -157,13 +176,35 @@ export function MoveFileModal({
         <DialogHeader>
           <DialogTitle>移动到</DialogTitle>
           <DialogDescription>
-            选择要将「{item.name}」移动到的目标文件夹
+            选择要将「{item.name}」移动到的目标位置
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
           <FileText className="size-4 shrink-0" />
           <span className="truncate">{item.name}</span>
         </div>
+        
+        {groups.length > 1 && (
+          <div className="mb-3">
+            <label className="text-xs text-muted-foreground mb-1.5 block">目标根目录</label>
+            <select
+              value={selectedRoot || ''}
+              onChange={(e) => {
+                setSelectedRoot(e.target.value)
+                setSelectedPath('/')
+                setExpandedPaths(new Set())
+              }}
+              className="w-full px-3 py-2 text-sm border rounded-md bg-background"
+            >
+              {groups.map((group) => (
+                <option key={group.root.path} value={group.root.path}>
+                  {group.root.path.split('/').pop() || group.root.path}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <ScrollArea className="flex-1 max-h-[300px] border rounded-md p-2">
           <div className="space-y-0.5">
             <div
@@ -188,6 +229,7 @@ export function MoveFileModal({
                 expandedPaths={expandedPaths}
                 onToggleExpand={handleToggleExpand}
                 currentItemPath={item.path}
+                rootPath={selectedRoot || ''}
               />
             ))}
           </div>
