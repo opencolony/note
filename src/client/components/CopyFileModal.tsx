@@ -30,7 +30,7 @@ interface CopyFileModalProps {
   onOpenChange: (open: boolean) => void
   item: { path: string; name: string; type: 'file' | 'directory' } | null
   groups: FileGroup[]
-  onCopy: (sourcePath: string, targetPath: string) => void
+  onCopy: (sourcePath: string, targetPath: string, sourceRoot: string, targetRoot: string) => void
 }
 
 interface TreeNodeSelectProps {
@@ -151,7 +151,8 @@ export function CopyFileModal({
       const targetPath = selectedPath === '/' 
         ? `${selectedRoot}/${fileName}` 
         : `${selectedPath}/${fileName}`
-      onCopy(item.path, targetPath)
+      const sourceRoot = groups.find(g => item.path.startsWith(g.root.path))?.root.path || ''
+      onCopy(item.path, targetPath, sourceRoot, selectedRoot)
       onOpenChange(false)
     }
   }

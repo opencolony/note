@@ -303,12 +303,31 @@ function App() {
   }, [fetchFiles])
 
   useEffect(() => {
-    const handleConfigChanged = () => {
-      fetchFiles()
+    const handleConfigChanged = async () => {
+      try {
+        const res = await fetch('/api/files/')
+        const data = await res.json()
+        setFileGroups(data.groups || [])
+
+        // Check if activeRoot still exists
+        const rootStillExists = data.groups?.some((g: { root: { path: string } }) => g.root.path === activeRoot)
+        if (!rootStillExists && activeRoot) {
+          // Clear editor
+          setPath(null)
+          setContent('')
+          window.location.hash = ''
+          // Switch to first available root or null
+          setActiveRoot(data.groups?.[0]?.root.path || null)
+        } else if (!activeRoot && data.groups?.length > 0) {
+          setActiveRoot(data.groups[0].root.path)
+        }
+      } catch (e) {
+        console.error('Failed to fetch files on config change:', e)
+      }
     }
     window.addEventListener('config-changed', handleConfigChanged)
     return () => window.removeEventListener('config-changed', handleConfigChanged)
-  }, [fetchFiles])
+  }, [activeRoot])
 
   useWebSocket(useCallback((data) => {
     if (data.type === 'file:change') {
@@ -568,7 +587,7 @@ function App() {
     }
   }, [path, load, fetchFiles, activeRoot])
 
-  const handleCopy = useCallback(async (sourcePath: string, targetPath: string) => {
+  const handleCopy = useCallback(async (sourcePath: string, targetPath: string, sourceRoot: string, targetRoot: string) => {
     try {
       await fetch('/api/files/copy', {
         method: 'POST',
@@ -576,6 +595,8 @@ function App() {
         body: JSON.stringify({
           sourcePath,
           targetPath,
+          sourceRoot,
+          targetRoot,
         }),
       })
       fetchFiles()
@@ -607,9 +628,9 @@ function App() {
 
   const handleSave = useCallback(() => {
     if (path && content) {
-      save(content, path)
+      save(content, path, activeRoot ?? undefined)
     }
-  }, [save, content, path])
+  }, [save, content, path, activeRoot])
 
   const handleToggleEditorMode = useCallback(() => {
     setEditorMode(prev => prev === 'wysiwyg' ? 'source' : 'wysiwyg')
@@ -867,10 +888,10 @@ function App() {
         onOpenChange={setCopyModalOpen}
         item={copyItem}
         groups={fileGroups}
-        onCopy={(sourcePath, targetPath) => {
+        onCopy={(sourcePath, targetPath, sourceRoot, targetRoot) => {
           setCopyItem(null)
           setCopyModalOpen(false)
-          handleCopy(sourcePath, targetPath)
+          handleCopy(sourcePath, targetPath, sourceRoot, targetRoot)
         }}
       />
 

@@ -35,7 +35,7 @@ export function useFile(options: UseFileOptions = {}) {
     }
   }, [])
 
-  const save = useCallback(async (newContent: string, filePath: string | null = path) => {
+  const save = useCallback(async (newContent: string, filePath: string | null = path, rootPath?: string) => {
     if (!filePath) return
 
     // 生成保存会话标识，用于区分自己保存和外部修改
@@ -45,7 +45,10 @@ export function useFile(options: UseFileOptions = {}) {
     setStatus('saving')
     optionsRef.current.onSaveStart?.(filePath, sessionId)
     try {
-      const res = await fetch(`/api/files${filePath}`, {
+      const url = rootPath
+        ? `/api/files${filePath}?root=${encodeURIComponent(rootPath)}`
+        : `/api/files${filePath}`
+      const res = await fetch(url, {
         method: 'POST',
         body: newContent,
       })
