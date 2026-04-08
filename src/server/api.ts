@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import fs from 'fs/promises'
+import { existsSync } from 'fs'
 import path from 'path'
 import os from 'os'
 import type { ColonynoteConfig, RootConfig } from '../config.js'
@@ -54,7 +55,7 @@ function findRootForPath(filePath: string, config: ColonynoteConfig): string | n
     const rootPath = path.resolve(root.path)
     const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
     const fullPath = path.join(rootPath, relativePath)
-    if (fullPath.startsWith(rootPath + path.sep) || fullPath === rootPath) {
+    if ((fullPath.startsWith(rootPath + path.sep) || fullPath === rootPath) && existsSync(fullPath)) {
       return rootPath
     }
   }
