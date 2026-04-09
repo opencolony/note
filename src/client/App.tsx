@@ -29,6 +29,7 @@ interface FileNode {
   name: string
   path: string
   type: 'file' | 'directory'
+  rootPath: string
   children?: FileNode[]
 }
 
@@ -173,6 +174,7 @@ function App() {
   const [editorMode, setEditorMode] = useState<'wysiwyg' | 'source'>('wysiwyg')
   const [currentDir, setCurrentDir] = useState('')
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
+  const rootExpandedPathsRef = useRef<Map<string, Set<string>>>(new Map())
   const [editingType, setEditingType] = useState<'file' | 'directory' | null>(null)
   const [refreshDialogOpen, setRefreshDialogOpen] = useState(false)
   const [pendingExternalChange, setPendingExternalChange] = useState<string | null>(null)
@@ -643,6 +645,16 @@ function App() {
     setEditorMode(prev => prev === 'wysiwyg' ? 'source' : 'wysiwyg')
   }, [])
 
+  const handleRootChange = useCallback((newRoot: string) => {
+    if (activeRoot) {
+      rootExpandedPathsRef.current.set(activeRoot, new Set(expandedPaths))
+    }
+    setActiveRoot(newRoot)
+    const savedPaths = rootExpandedPathsRef.current.get(newRoot)
+    setExpandedPaths(savedPaths ?? new Set())
+    setCurrentDir('')
+  }, [activeRoot, expandedPaths])
+
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     isResizingRef.current = true
@@ -742,7 +754,7 @@ function App() {
                 onCreateRequest={handleCreateRequest}
                 onSettingsOpen={() => setSettingsDialogOpen(true)}
                 onClose={() => setDrawerVisible(false)}
-                onRootChange={setActiveRoot}
+                onRootChange={handleRootChange}
               />
             </aside>
           </>
@@ -778,7 +790,7 @@ function App() {
               onCreateSubmit={handleCreateSubmit}
               onCreateRequest={handleCreateRequest}
               onSettingsOpen={() => setSettingsDialogOpen(true)}
-              onRootChange={setActiveRoot}
+              onRootChange={handleRootChange}
             />
             </aside>
             <div

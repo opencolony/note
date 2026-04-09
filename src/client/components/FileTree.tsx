@@ -29,6 +29,7 @@ interface FileNode {
   name: string
   path: string
   type: 'file' | 'directory'
+  rootPath: string
   children?: FileNode[]
 }
 
@@ -73,7 +74,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
   const [menuItem, setMenuItem] = useState<{ path: string; name: string; type: 'file' | 'directory'; childrenCount?: number } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const isDirectory = node.type === 'directory'
-  const isActive = node.path === activePath
+  const isActive = node.path === activePath && node.rootPath === activeRoot
   const isExpanded = expandedPaths.has(node.path)
   const hasChildren = isDirectory && node.children && node.children.length > 0
   const childrenCount = node.children?.length || 0
