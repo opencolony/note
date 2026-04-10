@@ -235,14 +235,40 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
   })
 
-  // Fuzzy search
   router.get('/roots/search', async (c) => {
     const query = c.req.query('q') || ''
     if (!query.trim()) return c.json({ matches: [] })
 
     const matches: string[] = []
-    const searchRoot = query.startsWith('/') ? query : os.homedir()
-    const pattern = `*${query}*`
+
+    let searchRoot: string
+    let searchTerm: string
+
+    if (query.startsWith('/')) {
+      const normalizedQuery = path.normalize(query)
+      const lastSlashIndex = normalizedQuery.lastIndexOf('/')
+
+      if (lastSlashIndex <= 0) {
+        searchRoot = '/'
+        searchTerm = normalizedQuery.slice(1)
+      } else {
+        const dirPart = normalizedQuery.slice(0, lastSlashIndex) || '/'
+        const basePart = normalizedQuery.slice(lastSlashIndex + 1)
+
+        if (existsSync(dirPart) && (await fs.stat(dirPart)).isDirectory()) {
+          searchRoot = dirPart
+          searchTerm = basePart
+        } else {
+          searchRoot = path.dirname(dirPart)
+          searchTerm = basePart
+        }
+      }
+    } else {
+      searchRoot = os.homedir()
+      searchTerm = query
+    }
+
+    const pattern = `*${searchTerm}*`
 
     async function traverse(dir: string, depth: number): Promise<void> {
       if (depth > 3 || matches.length >= 20) return
