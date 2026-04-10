@@ -24,6 +24,7 @@ type ThemeMode = 'light' | 'dark' | 'system'
 interface RootConfig {
   path: string
   exclude?: string[]
+  isCli?: boolean
 }
 
 interface SettingsDialogProps {
@@ -496,14 +497,15 @@ dist/
                       key={root.path}
                       className={cn(
                         "flex items-center justify-between gap-2 p-2 rounded-md border bg-background",
-                        failedRoot ? "border-destructive/50 bg-destructive/5" : "border-border"
+                        failedRoot ? "border-destructive/50 bg-destructive/5" : "border-border",
+                        root.isCli && "border-primary/30 bg-primary/5"
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         {failedRoot ? (
                           <AlertCircle className="size-4 text-destructive shrink-0" />
                         ) : (
-                          <Folder className="size-4 text-muted-foreground shrink-0" />
+                          <Folder className={cn("size-4 shrink-0", root.isCli ? "text-primary" : "text-muted-foreground")} />
                         )}
                         <div className="flex flex-col min-w-0">
                           <span
@@ -515,6 +517,11 @@ dist/
                           >
                             {root.path}
                           </span>
+                          {root.isCli && (
+                            <span className="text-xs text-primary truncate max-w-[180px] md:max-w-[260px]">
+                              CLI 启动参数
+                            </span>
+                          )}
                           {failedRoot && (
                             <span className="text-xs text-destructive truncate max-w-[180px] md:max-w-[260px]">
                               {failedRoot.error}
@@ -535,16 +542,18 @@ dist/
                             <RefreshCw className={cn("size-4", rootsState.loading && "animate-spin")} />
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          onClick={() => handleRemoveRoot(root.path)}
-                          disabled={rootsState.loading}
-                          title="删除"
-                        >
-                          <Trash2 className="size-4 text-destructive" />
-                        </Button>
+                        {!root.isCli && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => handleRemoveRoot(root.path)}
+                            disabled={rootsState.loading}
+                            title="删除"
+                          >
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )

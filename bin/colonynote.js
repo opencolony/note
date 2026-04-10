@@ -37,10 +37,9 @@ function collect(value, previous) {
 async function main() {
   const config = await loadConfig()
 
-  // CLI --root adds to config.roots (temporary, not saved)
   if (options.root && options.root.length > 0) {
     for (const rootPath of options.root) {
-      config.roots.push({ path: rootPath })
+      config.roots.unshift({ path: rootPath, isCli: true })
     }
   }
 

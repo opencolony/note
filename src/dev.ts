@@ -8,11 +8,31 @@ import fs from 'fs'
 import path from 'path'
 import { createFileRouter } from './server/api.js'
 import { setupWatcher } from './server/watcher.js'
-import { loadConfig } from './config.js'
+import { loadConfig, type RootConfig } from './config.js'
 import { IgnoreMatcher } from './server/ignore.js'
 
+function collect(value: string, previous: string[]) {
+  return previous.concat([value])
+}
+
 async function main() {
+  const args = process.argv.slice(2)
+  const cliRoots: string[] = []
+  
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === '-r' || args[i] === '--root') && args[i + 1]) {
+      cliRoots.push(args[i + 1])
+      i++
+    }
+  }
+
   const config = await loadConfig()
+
+  if (cliRoots.length > 0) {
+    for (const rootPath of cliRoots) {
+      config.roots.unshift({ path: rootPath, isCli: true } as RootConfig)
+    }
+  }
 
   const matcher = new IgnoreMatcher(config.roots[0]?.path || process.cwd(), {
     enableIgnoreFiles: config.ignore.enableIgnoreFiles,

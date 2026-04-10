@@ -6,6 +6,7 @@ import markdownExtensions from 'markdown-extensions'
 export interface RootConfig {
   path: string
   exclude?: string[]
+  isCli?: boolean
 }
 
 export interface ColonynoteConfig {
