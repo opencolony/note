@@ -88,18 +88,20 @@ async function walkDirectory(dir: string, dirPath: string, config: ColonynoteCon
 
       if (isDir) {
         const children = await walkDirectory(fullPath, dirPath, config, matcher)
+        const relativePath = path.relative(dirPath, fullPath).replace(/\\/g, '/')
         nodes.push({
           name: entry.name,
-          path: fullPath.replace(dirPath, '').replace(/\\/g, '/') || '/',
+          path: relativePath ? '/' + relativePath : '/',
           type: 'directory',
           dirPath,
           children,
         })
       } else if (entry.isFile()) {
         if (hasAllowedExtension(entry.name, config.allowedExtensions)) {
+          const relativePath = path.relative(dirPath, fullPath).replace(/\\/g, '/')
           nodes.push({
             name: entry.name,
-            path: fullPath.replace(dirPath, '').replace(/\\/g, '/') || '/',
+            path: relativePath ? '/' + relativePath : '/',
             type: 'file',
             dirPath,
           })
@@ -527,7 +529,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
             }
             await fs.writeFile(targetPath, '', 'utf-8')
           }
-          return c.json({ success: true, path: targetPath.replace(parentDirPath, '') })
+          return c.json({ success: true, path: '/' + path.relative(parentDirPath, targetPath).replace(/\\/g, '/') })
         } catch (e) {
           return c.json({ error: 'Failed to create' }, 500)
         }
