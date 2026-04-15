@@ -8,7 +8,7 @@ import fs from 'fs'
 import path from 'path'
 import { createFileRouter } from './server/api.js'
 import { setupWatcher } from './server/watcher.js'
-import { loadConfig, type RootConfig } from './config.js'
+import { loadConfig, type DirConfig } from './config.js'
 import { IgnoreMatcher } from './server/ignore.js'
 
 function collect(value: string, previous: string[]) {
@@ -17,30 +17,38 @@ function collect(value: string, previous: string[]) {
 
 async function main() {
   const args = process.argv.slice(2)
-  const cliRoots: string[] = []
-  
+  const cliDirs: string[] = []
+
   for (let i = 0; i < args.length; i++) {
-    if ((args[i] === '-r' || args[i] === '--root') && args[i + 1]) {
-      cliRoots.push(args[i + 1])
-      i++
+    if (args[i] === '-d' || args[i] === '--dir') {
+      if (args[i + 1]) {
+        cliDirs.push(args[i + 1])
+        i++
+      }
+    } else if (args[i] === '-r' || args[i] === '--root') {
+      console.warn('Warning: -r/--root is deprecated, use -d/--dir instead')
+      if (args[i + 1]) {
+        cliDirs.push(args[i + 1])
+        i++
+      }
     }
   }
 
   const config = await loadConfig()
 
-  if (cliRoots.length > 0) {
-    for (const rootPath of cliRoots) {
+  if (cliDirs.length > 0) {
+    for (const rootPath of cliDirs) {
       const resolvedPath = path.resolve(rootPath)
-      const exists = config.roots.some((r) => path.resolve(r.path) === resolvedPath)
+      const exists = config.dirs.some((r) => path.resolve(r.path) === resolvedPath)
       if (exists) {
         console.warn(`Skipping duplicate root: ${rootPath}`)
         continue
       }
-      config.roots.unshift({ path: rootPath, isCli: true } as RootConfig)
+      config.dirs.unshift({ path: rootPath, isCli: true } as DirConfig)
     }
   }
 
-  const matcher = new IgnoreMatcher(config.roots[0]?.path || process.cwd(), {
+  const matcher = new IgnoreMatcher(config.dirs[0]?.path || process.cwd(), {
     enableIgnoreFiles: config.ignore.enableIgnoreFiles,
     ignoreFileNames: config.ignore.ignoreFileNames,
     globalPatterns: config.ignore.patterns,
