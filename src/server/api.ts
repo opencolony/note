@@ -296,12 +296,12 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
         config.dirs.map(async (dir) => {
           try {
             return {
-              dir,
+              root: dir,
               files: await walkDirectory(dir.path, dir.path, config, matcher)
             }
           } catch (e) {
             return {
-              dir,
+              root: dir,
               files: [],
               error: e instanceof Error ? e.message : 'Failed to read directory'
             }
@@ -372,12 +372,12 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
           config.dirs.map(async (dir) => {
             try {
               return {
-                dir,
+                root: dir,
                 files: await walkDirectory(dir.path, dir.path, config, matcher)
               }
             } catch (e) {
               return {
-                dir,
+                root: dir,
                 files: [],
                 error: e instanceof Error ? e.message : 'Failed to read directory'
               }
