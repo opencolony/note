@@ -48,7 +48,7 @@ colonynote [options]
 # Start with default settings
 colonynote
 
-# Specify root directory
+# Specify directory
 colonynote -d /path/to/docs
 
 # Specify port
@@ -63,7 +63,7 @@ colonynote -d ./docs -p 8080
 
 ## Configuration
 
-Create a `colonynote.config.js` file in your project root:
+Create a `colonynote.config.js` file in your project directory:
 
 ```javascript
 export default {

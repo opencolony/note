@@ -48,7 +48,7 @@ colonynote [选项]
 # 使用默认设置启动
 colonynote
 
-# 指定根目录
+# 指定目录
 colonynote -d /path/to/docs
 
 # 指定端口
@@ -63,7 +63,7 @@ colonynote -d ./docs -p 8080
 
 ## 配置
 
-在项目根目录创建 `colonynote.config.js` 文件：
+在项目目录创建 `colonynote.config.js` 文件：
 
 ```javascript
 export default {
