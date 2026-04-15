@@ -35,7 +35,7 @@ colonynote [options]
 
 | Option | Alias | Description | Default |
 |--------|-------|-------------|---------|
-| `--root` | `-r` | Root directory for documents | Current directory |
+| `--dir` | `-d` | Directory for documents | Current directory |
 | `--port` | `-p` | Server port | `5787` |
 | `--host` | | Server host | `0.0.0.0` |
 | `--config` | `-c` | Config file path | `colonynote.config.js` |
@@ -49,7 +49,7 @@ colonynote [options]
 colonynote
 
 # Specify root directory
-colonynote -r /path/to/docs
+colonynote -d /path/to/docs
 
 # Specify port
 colonynote -p 3000
@@ -58,7 +58,7 @@ colonynote -p 3000
 colonynote -c ./my-config.js
 
 # Combine options
-colonynote -r ./docs -p 8080
+colonynote -d ./docs -p 8080
 ```
 
 ## Configuration
@@ -67,7 +67,7 @@ Create a `colonynote.config.js` file in your project root:
 
 ```javascript
 export default {
-  root: './docs',       // Root directory for documents
+  dirs: ['./docs'],  // Directories for documents
   port: 5787,           // Server port
   host: '0.0.0.0',      // Server host
   allowedExtensions: ['.md', '.markdown'],  // Supported file extensions

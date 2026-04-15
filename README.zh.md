@@ -35,7 +35,7 @@ colonynote [选项]
 
 | 选项 | 别名 | 描述 | 默认值 |
 |------|------|------|--------|
-| `--root` | `-r` | 文档根目录 | 当前目录 |
+| `--dir` | `-d` | 目录 | 当前目录 |
 | `--port` | `-p` | 服务器端口 | `5787` |
 | `--host` | | 服务器地址 | `0.0.0.0` |
 | `--config` | `-c` | 配置文件路径 | `colonynote.config.js` |
@@ -49,7 +49,7 @@ colonynote [选项]
 colonynote
 
 # 指定根目录
-colonynote -r /path/to/docs
+colonynote -d /path/to/docs
 
 # 指定端口
 colonynote -p 3000
@@ -58,7 +58,7 @@ colonynote -p 3000
 colonynote -c ./my-config.js
 
 # 组合选项
-colonynote -r ./docs -p 8080
+colonynote -d ./docs -p 8080
 ```
 
 ## 配置
@@ -67,7 +67,7 @@ colonynote -r ./docs -p 8080
 
 ```javascript
 export default {
-  root: './docs',       // 文档根目录
+  dirs: ['./docs'],  // 文档目录
   port: 5787,           // 服务器端口
   host: '0.0.0.0',      // 服务器地址
   allowedExtensions: ['.md', '.markdown'],  // 支持的文件扩展名
