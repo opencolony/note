@@ -43,14 +43,14 @@ interface SettingsState {
   }
 }
 
-interface RootsState {
-  roots: RootConfig[]
-  newRootPath: string
+interface DirsState {
+  dirs: RootConfig[]
+  newDirPath: string
   loading: boolean
   error: string | null
 }
 
-interface FailedRoot {
+interface FailedDir {
   path: string
   error: string
 }
@@ -66,15 +66,15 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       patterns: '',
     },
   })
-  const [rootsState, setRootsState] = React.useState<RootsState>({
-    roots: [],
-    newRootPath: '',
+  const [dirsState, setDirsState] = React.useState<DirsState>({
+    dirs: [],
+    newDirPath: '',
     loading: false,
     error: null,
   })
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  const [failedRoots, setFailedRoots] = React.useState<FailedRoot[]>([])
+  const [failedDirs, setFailedDirs] = React.useState<FailedDir[]>([])
   const [isMobile, setIsMobile] = React.useState(() => {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
@@ -147,16 +147,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       fetch('/api/files/roots')
         .then(res => res.json())
         .then(data => {
-          setRootsState(prev => ({
+          setDirsState(prev => ({
             ...prev,
-            roots: data.roots || [],
+            dirs: data.dirs || [],
             error: null,
           }))
         })
         .catch(() => {
-          setRootsState(prev => ({
+          setDirsState(prev => ({
             ...prev,
-            error: 'Failed to load roots',
+            error: 'Failed to load dirs',
           }))
         })
 
@@ -171,7 +171,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 path: g.root.path,
                 error: g.error,
               }))
-            setFailedRoots(failed)
+            setFailedDirs(failed)
           }
         })
         .catch(() => {
@@ -226,60 +226,60 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     }
   }, [settings, onOpenChange])
 
-  const handleAddRoot = React.useCallback(async () => {
-    if (!rootsState.newRootPath.trim()) return
+  const handleAddDir = React.useCallback(async () => {
+    if (!dirsState.newDirPath.trim()) return
 
-    setRootsState(prev => ({ ...prev, loading: true, error: null }))
+    setDirsState(prev => ({ ...prev, loading: true, error: null }))
     try {
       const res = await fetch('/api/files/roots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: rootsState.newRootPath }),
+        body: JSON.stringify({ path: dirsState.newDirPath }),
       })
 
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to add root')
+        throw new Error(data.error || 'Failed to add dir')
       }
 
-      setRootsState(prev => ({
+      setDirsState(prev => ({
         ...prev,
-        roots: [...prev.roots, data.root],
-        newRootPath: '',
+        dirs: [...prev.dirs, data.root],
+        newDirPath: '',
         loading: false,
       }))
       window.dispatchEvent(new CustomEvent('config-changed'))
     } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to add root'
-      setRootsState(prev => ({
+      const errorMessage = e instanceof Error ? e.message : 'Failed to add dir'
+      setDirsState(prev => ({
         ...prev,
         loading: false,
         error: errorMessage,
       }))
     }
-  }, [rootsState.newRootPath])
+  }, [dirsState.newDirPath])
 
-  const handleRemoveRoot = React.useCallback(async (rootPath: string) => {
-    setRootsState(prev => ({ ...prev, loading: true, error: null }))
+  const handleRemoveDir = React.useCallback(async (dirPath: string) => {
+    setDirsState(prev => ({ ...prev, loading: true, error: null }))
     try {
-      const res = await fetch(`/api/files/roots?path=${encodeURIComponent(rootPath)}`, {
+      const res = await fetch(`/api/files/roots?path=${encodeURIComponent(dirPath)}`, {
         method: 'DELETE',
       })
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || 'Failed to remove root')
+        throw new Error(data.error || 'Failed to remove dir')
       }
 
-      setRootsState(prev => ({
+      setDirsState(prev => ({
         ...prev,
-        roots: prev.roots.filter(r => r.path !== rootPath),
+        dirs: prev.dirs.filter(r => r.path !== dirPath),
         loading: false,
       }))
       window.dispatchEvent(new CustomEvent('config-changed'))
     } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to remove root'
-      setRootsState(prev => ({
+      const errorMessage = e instanceof Error ? e.message : 'Failed to remove dir'
+      setDirsState(prev => ({
         ...prev,
         loading: false,
         error: errorMessage,
@@ -287,10 +287,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     }
   }, [])
 
-  const handleRetryRoot = React.useCallback(async (rootPath: string) => {
-    setRootsState(prev => ({ ...prev, loading: true, error: null }))
+  const handleRetryDir = React.useCallback(async (dirPath: string) => {
+    setDirsState(prev => ({ ...prev, loading: true, error: null }))
     try {
-      // Re-fetch file groups to check if the root is now accessible
+      // Re-fetch file groups to check if the dir is now accessible
       const res = await fetch('/api/files')
       const data = await res.json()
 
@@ -301,24 +301,24 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             path: g.root.path,
             error: g.error,
           }))
-        setFailedRoots(failed)
+        setFailedDirs(failed)
 
-        // Check if the specific root is still failing
-        const stillFailing = failed.find((f: FailedRoot) => f.path === rootPath)
+        // Check if the specific dir is still failing
+        const stillFailing = failed.find((f: FailedDir) => f.path === dirPath)
         if (stillFailing) {
-          setRootsState(prev => ({
+          setDirsState(prev => ({
             ...prev,
             loading: false,
             error: `Still inaccessible: ${stillFailing.error}`,
           }))
         } else {
-          setRootsState(prev => ({ ...prev, loading: false }))
+          setDirsState(prev => ({ ...prev, loading: false }))
           window.dispatchEvent(new CustomEvent('config-changed'))
         }
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Failed to retry'
-      setRootsState(prev => ({
+      setDirsState(prev => ({
         ...prev,
         loading: false,
         error: errorMessage,
@@ -481,74 +481,74 @@ dist/
         </div>
 
         <div className="border-t border-border pt-4 space-y-4">
-          <div className="text-sm font-medium">文档根目录管理</div>
+          <div className="text-sm font-medium">目录管理</div>
           <p className="text-xs text-muted-foreground">
-            添加或删除文档根目录。修改后页面将刷新。
+            添加或删除目录。修改后页面将刷新。
           </p>
 
-          {rootsState.roots.length > 0 && (
+          {dirsState.dirs.length > 0 && (
             <div className="space-y-2">
-              <div className="text-xs font-medium text-muted-foreground">当前根目录</div>
+              <div className="text-xs font-medium text-muted-foreground">当前目录</div>
               <div className="space-y-1">
-                {rootsState.roots.map((root) => {
-                  const failedRoot = failedRoots.find(f => f.path === root.path)
+                {dirsState.dirs.map((dir) => {
+                  const failedDir = failedDirs.find(f => f.path === dir.path)
                   return (
                     <div
-                      key={root.path}
+                      key={dir.path}
                       className={cn(
                         "flex items-center justify-between gap-2 p-2 rounded-md border bg-background",
-                        failedRoot ? "border-destructive/50 bg-destructive/5" : "border-border",
-                        root.isCli && "border-primary/30 bg-primary/5"
+                        failedDir ? "border-destructive/50 bg-destructive/5" : "border-border",
+                        dir.isCli && "border-primary/30 bg-primary/5"
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {failedRoot ? (
+                        {failedDir ? (
                           <AlertCircle className="size-4 text-destructive shrink-0" />
                         ) : (
-                          <Folder className={cn("size-4 shrink-0", root.isCli ? "text-primary" : "text-muted-foreground")} />
+                          <Folder className={cn("size-4 shrink-0", dir.isCli ? "text-primary" : "text-muted-foreground")} />
                         )}
                         <div className="flex flex-col min-w-0">
                           <span
                             className={cn(
                               "text-sm truncate max-w-[180px] md:max-w-[260px]",
-                              failedRoot && "text-destructive"
+                              failedDir && "text-destructive"
                             )}
-                            title={root.path}
+                            title={dir.path}
                           >
-                            {root.path}
+                            {dir.path}
                           </span>
-                          {root.isCli && (
+                          {dir.isCli && (
                             <span className="text-xs text-primary truncate max-w-[180px] md:max-w-[260px]">
                               CLI 启动参数
                             </span>
                           )}
-                          {failedRoot && (
+                          {failedDir && (
                             <span className="text-xs text-destructive truncate max-w-[180px] md:max-w-[260px]">
-                              {failedRoot.error}
+                              {failedDir.error}
                             </span>
                           )}
                         </div>
                       </div>
                       <div className="flex gap-1 shrink-0">
-                        {failedRoot && (
+                        {failedDir && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="size-8"
-                            onClick={() => handleRetryRoot(root.path)}
-                            disabled={rootsState.loading}
+                            onClick={() => handleRetryDir(dir.path)}
+                            disabled={dirsState.loading}
                             title="重试"
                           >
-                            <RefreshCw className={cn("size-4", rootsState.loading && "animate-spin")} />
+                            <RefreshCw className={cn("size-4", dirsState.loading && "animate-spin")} />
                           </Button>
                         )}
-                        {!root.isCli && (
+                        {!dir.isCli && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="size-8"
-                            onClick={() => handleRemoveRoot(root.path)}
-                            disabled={rootsState.loading}
+                            onClick={() => handleRemoveDir(dir.path)}
+                            disabled={dirsState.loading}
                             title="删除"
                           >
                             <Trash2 className="size-4 text-destructive" />
@@ -563,20 +563,20 @@ dist/
           )}
 
           <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">添加新根目录</div>
+            <div className="text-xs font-medium text-muted-foreground">添加新目录</div>
             <div className="flex gap-2">
               <PathInput
-                value={rootsState.newRootPath}
+                value={dirsState.newDirPath}
                 onChange={(value) =>
-                  setRootsState(prev => ({ ...prev, newRootPath: value, error: null }))
+                  setDirsState(prev => ({ ...prev, newDirPath: value, error: null }))
                 }
                 placeholder="输入或搜索路径..."
-                disabled={rootsState.loading}
+                disabled={dirsState.loading}
                 className="flex-1"
               />
               <Button
-                onClick={handleAddRoot}
-                disabled={rootsState.loading || !rootsState.newRootPath.trim()}
+                onClick={handleAddDir}
+                disabled={dirsState.loading || !dirsState.newDirPath.trim()}
                 size="icon"
                 className="size-10"
               >
@@ -585,10 +585,10 @@ dist/
             </div>
           </div>
 
-          {rootsState.error && (
+          {dirsState.error && (
             <div className="flex items-center gap-2 p-2 rounded-md border border-destructive/50 bg-destructive/10">
               <AlertCircle className="size-4 text-destructive shrink-0" />
-              <p className="text-sm text-destructive">{rootsState.error}</p>
+              <p className="text-sm text-destructive">{dirsState.error}</p>
             </div>
           )}
         </div>
