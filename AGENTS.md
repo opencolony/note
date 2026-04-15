@@ -9,16 +9,16 @@
 
 ---
 
-# ColonyDoc Agent Guidelines
+# ColonyNote Agent Guidelines
 
 ## 项目概述
 
-ColonyDoc 是一款**移动端优先**的 Markdown 在线编辑器，支持实时预览、LaTeX 公式和 Mermaid 图表。前端使用 React + Vite + Tailwind CSS v4，后端使用 Hono.js + WebSocket。
+ColonyNote 是一款**移动端优先**的 Markdown 在线编辑器，支持实时预览、LaTeX 公式和 Mermaid 图表。前端使用 React + Vite + Tailwind CSS v4，后端使用 Hono.js + WebSocket。
 
 ## 构建命令
 
 ```bash
-# 全栈开发（后端 + 前端热更新）
+# 全栈开发（后端 + 前端热更新）- 默认端口：前端 5787，后端 5788
 npm run dev
 
 # 仅前端开发（Vite 开发服务器，端口 5787）
@@ -71,12 +71,12 @@ import { Button } from './components/ui/button'
 // 工具函数
 import { cn } from './lib/utils'
 
-// Path aliases
+// Path aliases - 始终使用 @/* 导入
 import { cn } from '@/client/lib/utils'
 ```
 
 ### 样式规范
-- 仅使用 Tailwind CSS 类
+- 仅使用 Tailwind CSS 类（v4 CSS-first 配置）
 - 使用 `cn()` 工具函数（clsx + tailwind-merge）处理条件类名
 - 基于 shadcn/ui 组件构建（Button、Sheet、Dialog 等）
 - 使用 `class-variance-authority` (CVA) 定义组件变体
@@ -140,7 +140,7 @@ export { Component, componentVariants }
 ### 移动端模式
 - 使用 `isMobile` 状态条件渲染移动端/桌面端 UI
 - 移动端：基于 Drawer 的侧边栏导航（Sheet 组件）
-- 桌面端：固定侧边栏
+- 桌面端：固定侧边栏，可拖拽调整宽度
 - 触摸友好的点击目标（最小 44px）
 - 移动端 Header 包含汉堡菜单、搜索和编辑器模式切换
 
@@ -158,6 +158,22 @@ useEffect(() => {
   return () => window.removeEventListener('resize', checkMobile)
 }, [])
 ```
+
+## 编辑器架构
+
+项目使用两个编辑器：
+- **TipTap 3** - WYSIWYG 编辑器，主要编辑模式
+- **Milkdown** - 轻量级 Markdown 编辑器，用于特殊场景
+
+编辑器模式切换：
+- `wysiwyg` - 所见即所得模式
+- `source` - 源码模式
+
+## WebSocket 实时同步
+
+- 后端通过 WebSocket 广播文件变更事件
+- 前端使用 `useWebSocket` hook 监听变更
+- 保存时记录会话 ID，避免误判自己的保存为外部修改
 
 ## 完成工作
 
@@ -178,12 +194,14 @@ src/
 │   │   └── *.tsx       # 功能组件
 │   ├── hooks/          # 自定义 React hooks
 │   ├── lib/            # 工具函数（cn、api 客户端）
-│   └── pages/          # 页面组件
+│   └── pages/          # 页面组件（当前未使用）
 ├── server/             # Hono.js 后端
 │   ├── api.ts          # 文件路由 API
 │   ├── app.ts          # Hono 应用配置
 │   ├── index.ts        # 服务器入口
-│   └── watcher.ts      # 文件系统监视器
+│   ├── watcher.ts      # 文件系统监视器
+│   └── ignore.ts       # 忽略模式匹配器
+├── config.ts           # 配置加载和默认值
 └── dev.ts              # 开发服务器启动器
 ```
 
@@ -192,6 +210,10 @@ src/
 `@/*` 别名映射到 `src/*`：
 - `@/client/*` → `src/client/*`
 - `@/server/*` → `src/server/*`（仅后端使用）
+
+配置位置：
+- `tsconfig.json` - TypeScript 路径解析
+- `vite.config.ts` - Vite 构建路径解析
 
 ## 关键依赖
 
@@ -206,3 +228,12 @@ src/
 - `vercel-react-best-practices/` - React 性能优化
 - `shadcn-ui/` - shadcn/ui 组件模式
 - `tailwind-design-system/` - Tailwind CSS v4 设计令牌
+
+## 重要约束
+
+- 项目使用 **ES Modules** (`"type": "module"`)
+- Node.js 版本要求：>= 18
+- 包管理器：pnpm（推荐）
+- 严格 TypeScript 模式 - 禁止 `any` 类型
+- 组件优先使用 `memo()` 包装以优化重渲染
+- UI 组件使用命名导出，页面使用默认导出
