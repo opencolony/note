@@ -13,19 +13,19 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const clientDir = path.join(__dirname, '..', 'client')
 
-function findRootForPath(filePath: string, config: ColonynoteConfig): string {
-  for (const root of config.roots) {
-    if (filePath.startsWith(root.path)) {
-      return root.path
+function findDirForPath(filePath: string, config: ColonynoteConfig): string {
+  for (const dir of config.dirs) {
+    if (filePath.startsWith(dir.path)) {
+      return dir.path
     }
   }
-  return config.roots[0]?.path || ''
+  return config.dirs[0]?.path || ''
 }
 
 async function main() {
   const config = await loadConfig()
 
-  const matcher = new IgnoreMatcher(config.roots[0]?.path || process.cwd(), {
+  const matcher = new IgnoreMatcher(config.dirs[0]?.path || process.cwd(), {
     enableIgnoreFiles: config.ignore.enableIgnoreFiles,
     ignoreFileNames: config.ignore.ignoreFileNames,
     globalPatterns: config.ignore.patterns,
@@ -106,7 +106,7 @@ async function main() {
 
   setupWatcher(config, matcher, {
     onFileChange: (rootPath: string, event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', filePath: string) => {
-      const actualRootPath = findRootForPath(filePath, config)
+      const actualRootPath = findDirForPath(filePath, config)
       const relativePath = filePath.replace(actualRootPath, '')
       const message = JSON.stringify({ type: 'file:change', event, path: relativePath, rootPath: actualRootPath })
       clients.forEach((client) => {
@@ -120,7 +120,7 @@ async function main() {
   console.log(`\n  ColonyNote is running!\n`)
   console.log(`  Local:   http://localhost:${DEFAULT_PORT}`)
   console.log(`  Network: http://${DEFAULT_HOST}:${DEFAULT_PORT}`)
-  console.log(`  Roots:   ${config.roots.map(r => r.path).join(', ')}\n`)
+  console.log(`  Dirs:   ${config.dirs.map(r => r.path).join(', ')}\n`)
 }
 
 main().catch((e) => {

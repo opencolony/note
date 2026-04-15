@@ -158,7 +158,7 @@ export class IgnoreMatcher {
 
       // 向上一级目录
       const parentPath = path.dirname(currentPath)
-      if (parentPath === currentPath) break // 已到达根目录
+      if (parentPath === currentPath) break // 已到达目录
       currentPath = parentPath
     }
   }

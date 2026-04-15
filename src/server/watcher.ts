@@ -8,7 +8,7 @@ export interface WatcherCallbacks {
 }
 
 export function setupWatcher(config: ColonynoteConfig, matcher: IgnoreMatcher, callbacks: WatcherCallbacks) {
-  const rootPaths = config.roots.map(r => r.path)
+  const rootPaths = config.dirs.map(r => r.path)
   const watcher = chokidar.watch(rootPaths, {
     ignored: (filePath: string) => {
       if (!config.showHiddenFiles && (filePath.includes('/.') || filePath.startsWith('.'))) return true
@@ -34,33 +34,33 @@ export function setupWatcher(config: ColonynoteConfig, matcher: IgnoreMatcher, c
   watcher
     .on('add', (path) => {
       if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
-        const matchingRoot = config.roots.find(r => path.startsWith(r.path))
-        const rootPath = matchingRoot?.path || config.roots[0]?.path || ''
+        const matchingRoot = config.dirs.find(r => path.startsWith(r.path))
+        const rootPath = matchingRoot?.path || config.dirs[0]?.path || ''
         callbacks.onFileChange(rootPath, 'add', path)
       }
     })
     .on('change', (path) => {
       if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
-        const matchingRoot = config.roots.find(r => path.startsWith(r.path))
-        const rootPath = matchingRoot?.path || config.roots[0]?.path || ''
+        const matchingRoot = config.dirs.find(r => path.startsWith(r.path))
+        const rootPath = matchingRoot?.path || config.dirs[0]?.path || ''
         callbacks.onFileChange(rootPath, 'change', path)
       }
     })
     .on('unlink', (path) => {
       if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
-        const matchingRoot = config.roots.find(r => path.startsWith(r.path))
-        const rootPath = matchingRoot?.path || config.roots[0]?.path || ''
+        const matchingRoot = config.dirs.find(r => path.startsWith(r.path))
+        const rootPath = matchingRoot?.path || config.dirs[0]?.path || ''
         callbacks.onFileChange(rootPath, 'unlink', path)
       }
     })
     .on('addDir', (path) => {
-      const matchingRoot = config.roots.find(r => path.startsWith(r.path))
-      const rootPath = matchingRoot?.path || config.roots[0]?.path || ''
+      const matchingRoot = config.dirs.find(r => path.startsWith(r.path))
+      const rootPath = matchingRoot?.path || config.dirs[0]?.path || ''
       callbacks.onFileChange(rootPath, 'addDir', path)
     })
     .on('unlinkDir', (path) => {
-      const matchingRoot = config.roots.find(r => path.startsWith(r.path))
-      const rootPath = matchingRoot?.path || config.roots[0]?.path || ''
+      const matchingRoot = config.dirs.find(r => path.startsWith(r.path))
+      const rootPath = matchingRoot?.path || config.dirs[0]?.path || ''
       callbacks.onFileChange(rootPath, 'unlinkDir', path)
     })
     .on('error', (error) => console.error('Watcher error:', error))
