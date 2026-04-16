@@ -8,11 +8,20 @@ import fs from 'fs'
 import path from 'path'
 import { createFileRouter } from './server/api.js'
 import { setupWatcher } from './server/watcher.js'
-import { loadConfig, type DirConfig } from './config.js'
+import { loadConfig, type DirConfig, type ColonynoteConfig } from './config.js'
 import { IgnoreMatcher } from './server/ignore.js'
 
 function collect(value: string, previous: string[]) {
   return previous.concat([value])
+}
+
+function findDirForPath(filePath: string, config: ColonynoteConfig): string {
+  for (const dir of config.dirs) {
+    if (filePath.startsWith(dir.path)) {
+      return dir.path
+    }
+  }
+  return config.dirs[0]?.path || ''
 }
 
 async function main() {
@@ -90,8 +99,9 @@ async function main() {
 
   setupWatcher(config, matcher, {
     onFileChange: (rootPath: string, event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', filePath: string) => {
-      const relativePath = filePath.replace(rootPath, '')
-      const message = JSON.stringify({ type: 'file:change', event, path: relativePath })
+      const actualRootPath = findDirForPath(filePath, config)
+      const relativePath = '/' + filePath.replace(actualRootPath, '').replace(/^\/+/, '')
+      const message = JSON.stringify({ type: 'file:change', event, path: relativePath, rootPath: actualRootPath })
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message)
