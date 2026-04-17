@@ -1,0 +1,13 @@
+/bin
+/public
+/src
+/src/client
+/src/client/components
+/src/client/components/ui
+/src/client/hooks
+/src/client/lib
+/src/client/public
+/src/server
+/AGENTS.md
+/README.md
+/README.zh.md

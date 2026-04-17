@@ -15,6 +15,7 @@ import {
 } from './ui/sheet'
 import { ScrollArea } from './ui/scroll-area'
 import { cn } from '@/client/lib/utils'
+import { parseSearchIntent } from '@/client/lib/searchIntent'
 
 interface AddDirDialogProps {
   open: boolean
@@ -131,7 +132,15 @@ export const AddDirDialog = memo(function AddDirDialog({
           setSearchResults([])
         } else {
           setIsSearchMode(true)
-          const res = await fetch(`/api/files/dirs/search?q=${encodeURIComponent(query)}`)
+
+          const intent = parseSearchIntent(query)
+
+          const url = new URL('/api/files/dirs/search', window.location.origin)
+          url.searchParams.set('q', intent.query)
+          if (intent.root) url.searchParams.set('root', intent.root)
+          url.searchParams.set('mode', intent.mode)
+
+          const res = await fetch(url.toString())
           const data = await res.json()
           const results = data.matches || []
           setSearchResults(results)

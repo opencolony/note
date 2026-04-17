@@ -277,38 +277,26 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
   router.get('/dirs/search', async (c) => {
     const query = c.req.query('q') || ''
+    const rawRoot = c.req.query('root')
+    const mode = c.req.query('mode') || 'fuzzy'
+
     if (!query.trim()) return c.json({ matches: [] })
 
     let searchRoot: string
-    let searchTerm: string
-
-    if (query.startsWith('/')) {
-      const normalizedQuery = path.normalize(query)
-      const lastSlashIndex = normalizedQuery.lastIndexOf('/')
-
-      if (lastSlashIndex <= 0) {
-        searchRoot = '/'
-        searchTerm = normalizedQuery.slice(1)
-      } else {
-        const dirPart = normalizedQuery.slice(0, lastSlashIndex) || '/'
-        const basePart = normalizedQuery.slice(lastSlashIndex + 1)
-
-        if (existsSync(dirPart) && (await fs.stat(dirPart)).isDirectory()) {
-          searchRoot = dirPart
-          searchTerm = basePart
-        } else {
-          searchRoot = path.dirname(dirPart)
-          searchTerm = basePart
-        }
-      }
+    if (rawRoot === '~') {
+      searchRoot = os.homedir()
+    } else if (rawRoot === '/') {
+      searchRoot = '/'
+    } else if (rawRoot && path.isAbsolute(rawRoot)) {
+      searchRoot = path.normalize(rawRoot)
     } else {
       searchRoot = os.homedir()
-      searchTerm = query
     }
 
-    const candidates: string[] = []
     const MAX_DEPTH = 5
     const MAX_RESULTS = 100
+
+    const candidates: { name: string; fullPath: string }[] = []
 
     async function traverse(dir: string, depth: number): Promise<void> {
       if (depth > MAX_DEPTH || candidates.length >= MAX_RESULTS) return
@@ -324,7 +312,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
         }
         for (const subDir of subDirs) {
           if (candidates.length >= MAX_RESULTS) break
-          candidates.push(subDir)
+          candidates.push({ name: path.basename(subDir), fullPath: subDir })
         }
         for (const subDir of subDirs) {
           if (candidates.length >= MAX_RESULTS) break
@@ -335,13 +323,28 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
     await traverse(searchRoot, 0)
 
-    const results = fuzzysort.go(searchTerm, candidates, {
-      limit: MAX_RESULTS,
-      threshold: -10000,
-    })
+    let results: { obj: { name: string; fullPath: string }; score: number; indexes: number[] }[]
+
+    if (mode === 'prefix') {
+      const lowerQuery = query.toLowerCase()
+      results = candidates
+        .filter(c => c.name.toLowerCase().startsWith(lowerQuery))
+        .slice(0, MAX_RESULTS)
+        .map(c => ({
+          obj: c,
+          score: 0,
+          indexes: Array.from({ length: query.length }, (_, i) => i)
+        }))
+    } else {
+      results = fuzzysort.go(query, candidates, {
+        key: 'name',
+        limit: MAX_RESULTS,
+        threshold: -10000,
+      }) as unknown as typeof results
+    }
 
     const matches = results.map(r => ({
-      path: r.target,
+      path: r.obj.fullPath,
       score: r.score,
       indexes: r.indexes,
     }))
