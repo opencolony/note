@@ -31,12 +31,14 @@ interface EditDirDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   dirPath: string | null
+  isCli?: boolean
 }
 
 export const EditDirDialog = memo(function EditDirDialog({
   open,
   onOpenChange,
   dirPath,
+  isCli,
 }: EditDirDialogProps) {
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -150,7 +152,8 @@ export const EditDirDialog = memo(function EditDirDialog({
             variant="destructive"
             size="sm"
             onClick={() => setDeleteConfirmOpen(true)}
-            disabled={isSaving || isDeleting}
+            disabled={isSaving || isDeleting || isCli}
+            title={isCli ? 'CLI启动的目录无法删除' : undefined}
           >
             <Trash2 className="size-4 mr-1" />
             删除目录

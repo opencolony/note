@@ -137,7 +137,7 @@ export const AddDirDialog = memo(function AddDirDialog({
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="rounded-t-2xl h-[85vh] flex flex-col">
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] flex flex-col">
           <SheetHeader className="flex-shrink-0">
             <SheetTitle>添加目录</SheetTitle>
             <SheetDescription>

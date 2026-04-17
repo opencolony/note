@@ -990,6 +990,7 @@ function App() {
         open={editDirDialogOpen}
         onOpenChange={setEditDirDialogOpen}
         dirPath={editDirPath}
+        isCli={fileGroups.find(g => g.root.path === editDirPath)?.root.isCli}
       />
     </div>
   )
