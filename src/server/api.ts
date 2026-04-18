@@ -273,8 +273,6 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     const rawRoot = c.req.query('root')
     const mode = c.req.query('mode') || 'fuzzy'
 
-    if (!query.trim()) return c.json({ matches: [] })
-
     let searchRoot: string
     if (rawRoot === '~' || rawRoot === '') {
       searchRoot = os.homedir()
@@ -290,6 +288,36 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     } else {
       searchRoot = os.homedir()
     }
+
+    // Browse mode: list direct children directories
+    if (mode === 'browse') {
+      try {
+        const stat = await fs.stat(searchRoot)
+        if (!stat.isDirectory()) {
+          return c.json({ matches: [] })
+        }
+
+        const entries = await fs.readdir(searchRoot, { withFileTypes: true })
+        const dirs: { path: string; score: number; indexes: number[] }[] = []
+
+        for (const entry of entries) {
+          if (entry.name.startsWith('.')) continue
+          const fullPath = path.join(searchRoot, entry.name)
+          if (entry.isDirectory() && !checkSensitivePath(fullPath)) {
+            dirs.push({ path: fullPath, score: 0, indexes: [] })
+          }
+        }
+
+        dirs.sort((a, b) => path.basename(a.path).localeCompare(path.basename(b.path)))
+
+        return c.json({ matches: dirs })
+      } catch {
+        return c.json({ matches: [] })
+      }
+    }
+
+    // Search mode requires non-empty query
+    if (!query.trim()) return c.json({ matches: [] })
 
     const MAX_DEPTH = 5
     const MAX_CANDIDATES = 10000

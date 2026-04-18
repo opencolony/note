@@ -1,5 +1,5 @@
 export interface SearchIntent {
-  mode: 'fuzzy' | 'prefix'
+  mode: 'fuzzy' | 'prefix' | 'browse'
   root: string
   query: string
 }
@@ -17,9 +17,9 @@ export function parseSearchIntent(input: string): SearchIntent {
     const pathPart = trimmed.slice(0, lastSlashIndex)
     const queryPart = trimmed.slice(lastSlashIndex + 1)
 
-    // If query part is empty, it's just a path browse
+    // If query part is empty, it's a browse mode (e.g., projects/, ~/projects/, /projects/)
     if (!queryPart) {
-      return { mode: 'fuzzy', root: pathPart || '/', query: '' }
+      return { mode: 'browse', root: pathPart || '/', query: '' }
     }
 
     // Single-level absolute path like '/et' → root should be '/'
@@ -29,14 +29,14 @@ export function parseSearchIntent(input: string): SearchIntent {
 
   // Handle ~ alone
   if (trimmed === '~') {
-    return { mode: 'fuzzy', root: '~', query: '' }
+    return { mode: 'browse', root: '~', query: '' }
   }
 
   // Handle / alone
   if (trimmed === '/') {
-    return { mode: 'fuzzy', root: '/', query: '' }
+    return { mode: 'browse', root: '/', query: '' }
   }
 
-  // Plain text search
-  return { mode: 'fuzzy', root: '', query: trimmed }
+  // Plain text without slash → fuzzy search in home directory
+  return { mode: 'fuzzy', root: '~', query: trimmed }
 }
