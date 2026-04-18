@@ -14,7 +14,6 @@ export interface ColonynoteConfig {
   dirs: DirConfig[]
   allowedExtensions: string[]
   showHiddenFiles: boolean
-  roots: DirConfig[]
   theme: {
     default: 'light' | 'dark' | 'system'
   }
@@ -58,8 +57,7 @@ export const DEFAULT_SENSITIVE_PATHS = [
 ]
 
 const defaultConfig: ColonynoteConfig = {
-  dirs: [{ path: process.cwd() }],
-  roots: [{ path: process.cwd() }],
+  dirs: [],
   allowedExtensions: markdownExtensions.map((ext) => `.${ext}`),
   showHiddenFiles: false,
   theme: {
@@ -99,22 +97,12 @@ export async function loadConfig(): Promise<ColonynoteConfig> {
       const content = fs.readFileSync(configPath, 'utf-8')
       const userConfig = JSON.parse(content)
 
-      if (userConfig.roots && !userConfig.dirs) {
-        userConfig.dirs = userConfig.roots
-        delete userConfig.roots
-      } else if (userConfig.root && !userConfig.roots && !userConfig.dirs) {
-        userConfig.dirs = [{ path: userConfig.root }]
-        delete userConfig.root
-      }
-
       // Merge user config, filtering out invalid fields
-      const validFields = ['dirs', 'roots', 'showHiddenFiles', 'allowedExtensions', 'theme', 'editor', 'ignore']
+      const validFields = ['dirs', 'showHiddenFiles', 'allowedExtensions', 'theme', 'editor', 'ignore']
       for (const field of validFields) {
         if (field in userConfig) {
           if (field === 'dirs' && Array.isArray(userConfig.dirs)) {
             config.dirs = userConfig.dirs
-          } else if (field === 'roots' && Array.isArray(userConfig.roots)) {
-            config.dirs = userConfig.roots
           } else if (field === 'showHiddenFiles' && typeof userConfig.showHiddenFiles === 'boolean') {
             config.showHiddenFiles = userConfig.showHiddenFiles
           } else if (field === 'allowedExtensions' && Array.isArray(userConfig.allowedExtensions)) {
@@ -136,10 +124,21 @@ export async function loadConfig(): Promise<ColonynoteConfig> {
     }
   }
 
+  // Resolve all paths to absolute paths
   config.dirs = config.dirs.map((dir) => ({
     ...dir,
     path: path.resolve(dir.path),
   }))
+
+  // Deduplicate directories by resolved path, keeping the first occurrence
+  const seenPaths = new Set<string>()
+  config.dirs = config.dirs.filter((dir) => {
+    if (seenPaths.has(dir.path)) {
+      return false
+    }
+    seenPaths.add(dir.path)
+    return true
+  })
 
   return config
 }

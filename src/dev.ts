@@ -34,12 +34,6 @@ async function main() {
         cliDirs.push(args[i + 1])
         i++
       }
-    } else if (args[i] === '-r' || args[i] === '--root') {
-      console.warn('Warning: -r/--root is deprecated, use -d/--dir instead')
-      if (args[i + 1]) {
-        cliDirs.push(args[i + 1])
-        i++
-      }
     }
   }
 

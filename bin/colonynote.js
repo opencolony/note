@@ -24,7 +24,6 @@ program
   .description('Markdown online editor')
   .version(pkg.version)
   .option('-d, --dir <path>', 'Root directory (can be specified multiple times)', collect, [])
-  .option('-r, --root <path>', '[DEPRECATED] Use --dir instead', collect, [])
   .option('-p, --port <number>', 'Server port', DEFAULT_PORT.toString())
   .option('--host <host>', 'Server host', DEFAULT_HOST)
   .parse()
@@ -38,13 +37,6 @@ function collect(value, previous) {
 async function main() {
   const config = await loadConfig()
 
-  if (options.root && options.root.length > 0) {
-    console.warn('Warning: --root/-r is deprecated, use --dir/-d instead')
-    if (!options.dir || options.dir.length === 0) {
-      options.dir = options.root
-    }
-  }
-
   if (options.dir && options.dir.length > 0) {
     for (const rootPath of options.dir) {
       const resolvedPath = resolve(rootPath)
@@ -53,7 +45,7 @@ async function main() {
         console.warn(`Skipping duplicate dir: ${rootPath}`)
         continue
       }
-      config.dirs.unshift({ path: rootPath, isCli: true })
+      config.dirs.unshift({ path: resolvedPath, isCli: true })
     }
   }
 
