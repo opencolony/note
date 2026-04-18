@@ -16,7 +16,7 @@ interface SearchDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   files: FileNode[]
-  onSelect: (path: string) => void
+  onSelect: (path: string, rootPath?: string) => void
 }
 
 export function SearchDialog({ open, onOpenChange, files, onSelect }: SearchDialogProps) {
@@ -67,8 +67,8 @@ export function SearchDialog({ open, onOpenChange, files, onSelect }: SearchDial
     return () => clearTimeout(debounceTimer)
   }, [query, search])
 
-  const handleSelect = useCallback((path: string) => {
-    onSelect(path)
+  const handleSelect = useCallback((path: string, rootPath?: string) => {
+    onSelect(path, rootPath)
     onOpenChange(false)
   }, [onSelect, onOpenChange])
 
@@ -81,7 +81,8 @@ export function SearchDialog({ open, onOpenChange, files, onSelect }: SearchDial
       setSelectedIndex(prev => Math.max(prev - 1, 0))
     } else if (e.key === 'Enter' && results.length > 0) {
       e.preventDefault()
-      handleSelect(results[selectedIndex].path)
+      const selected = results[selectedIndex]
+      handleSelect(selected.path, selected.rootPath)
     } else if (e.key === 'Escape') {
       onOpenChange(false)
     }
@@ -164,7 +165,7 @@ export function SearchDialog({ open, onOpenChange, files, onSelect }: SearchDial
             {results.map((result, index) => (
               <button
                 key={result.path}
-                onClick={() => handleSelect(result.path)}
+                onClick={() => handleSelect(result.path, result.rootPath)}
                 className={cn(
                   "w-full px-4 py-3 flex items-start gap-3 text-left hover:bg-accent transition-colors",
                   index === selectedIndex && "bg-accent"
@@ -172,11 +173,16 @@ export function SearchDialog({ open, onOpenChange, files, onSelect }: SearchDial
               >
                 <FileText className="size-5 mt-0.5 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium truncate">{result.name}</span>
                     {result.source === 'name' && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                         文件名
+                      </span>
+                    )}
+                    {result.rootName && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        {result.rootName}
                       </span>
                     )}
                   </div>

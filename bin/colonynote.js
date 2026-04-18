@@ -60,7 +60,7 @@ async function main() {
   const port = parseInt(options.port, 10)
   const host = options.host
 
-  const matcher = new IgnoreMatcher(config.dirs[0]?.path || process.cwd(), {
+  const matcher = new IgnoreMatcher(config.dirs.map(d => d.path), {
     enableIgnoreFiles: config.ignore.enableIgnoreFiles,
     ignoreFileNames: config.ignore.ignoreFileNames,
     globalPatterns: config.ignore.patterns,

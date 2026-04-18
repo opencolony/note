@@ -912,7 +912,12 @@ function App() {
         open={searchDialogOpen}
         onOpenChange={setSearchDialogOpen}
         files={allFiles}
-        onSelect={(path) => handleSelectFile(path, 'file')}
+        onSelect={(path, rootPath) => {
+          if (rootPath && activeDir !== rootPath) {
+            setActiveDir(rootPath)
+          }
+          handleSelectFile(path, 'file', rootPath)
+        }}
       />
 
       <RenameDialog

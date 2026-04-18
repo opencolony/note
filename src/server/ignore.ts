@@ -50,13 +50,24 @@ export const defaultIgnoreConfig: IgnoreConfig = {
 export class IgnoreMatcher {
   private ignoreFiles: Map<string, IgnoreFile> = new Map()
   private globalRules: IgnoreRule[] = []
-  private rootPath: string
+  private rootPaths: string[]
   private config: IgnoreConfig
 
-  constructor(rootPath: string, config: IgnoreConfig = defaultIgnoreConfig) {
-    this.rootPath = path.resolve(rootPath)
+  constructor(rootPaths: string | string[], config: IgnoreConfig = defaultIgnoreConfig) {
+    this.rootPaths = Array.isArray(rootPaths) 
+      ? rootPaths.map(p => path.resolve(p)) 
+      : [path.resolve(rootPaths)]
     this.config = config
-    this.globalRules = this.parsePatterns(config.globalPatterns, this.rootPath)
+    this.globalRules = this.parsePatterns(config.globalPatterns, this.rootPaths[0])
+  }
+
+  private findRootForPath(absolutePath: string): string | null {
+    for (const root of this.rootPaths) {
+      if (absolutePath.startsWith(root)) {
+        return root
+      }
+    }
+    return null
   }
 
   /**
@@ -129,9 +140,9 @@ export class IgnoreMatcher {
 
   /**
    * 就近查找并加载 .ignore 文件
-   * 从 targetPath 向上查找，直到 rootPath
+   * 从 targetPath 向上查找，直到 matchedRoot
    */
-  findAndLoadIgnoreFiles(targetPath: string): void {
+  findAndLoadIgnoreFiles(targetPath: string, matchedRoot: string): void {
     if (this.config.enableIgnoreFiles === false) return
 
     let currentPath = path.resolve(targetPath)
@@ -146,7 +157,7 @@ export class IgnoreMatcher {
       // 路径不存在，假设是目录
     }
 
-    while (currentPath.startsWith(this.rootPath) && currentPath.length >= this.rootPath.length) {
+    while (currentPath.startsWith(matchedRoot) && currentPath.length >= matchedRoot.length) {
       for (const fileName of (this.config.ignoreFileNames || [])) {
         const ignoreFilePath = path.join(currentPath, fileName)
 
@@ -212,11 +223,12 @@ export class IgnoreMatcher {
   isIgnored(targetPath: string, isDirectory: boolean = false): boolean {
     const absolutePath = path.resolve(targetPath)
 
-    // 确保路径在 root 内
-    if (!absolutePath.startsWith(this.rootPath)) return false
+    // 检查是否在任何一个 root 下
+    const matchedRoot = this.findRootForPath(absolutePath)
+    if (!matchedRoot) return false
 
     // 就近查找并加载 .ignore 文件
-    this.findAndLoadIgnoreFiles(absolutePath)
+    this.findAndLoadIgnoreFiles(absolutePath, matchedRoot)
 
     // 收集所有相关规则（按优先级排序）
     // 规则优先级：就近的 .ignore 文件 > 上层的 .ignore 文件 > 全局配置
@@ -266,7 +278,7 @@ export class IgnoreMatcher {
   }
 
   updateGlobalPatterns(patterns: string[]): void {
-    this.globalRules = this.parsePatterns(patterns, this.rootPath)
+    this.globalRules = this.parsePatterns(patterns, this.rootPaths[0])
   }
 
   /**

@@ -25,7 +25,7 @@ function findDirForPath(filePath: string, config: ColonynoteConfig): string {
 async function main() {
   const config = await loadConfig()
 
-  const matcher = new IgnoreMatcher(config.dirs[0]?.path || process.cwd(), {
+  const matcher = new IgnoreMatcher(config.dirs.map(d => d.path), {
     globalPatterns: config.ignore.patterns,
   })
 

@@ -7,7 +7,7 @@ import { IgnoreMatcher, defaultIgnoreConfig } from './ignore.js'
 export function createApp(config: ColonynoteConfig) {
   const app = new Hono()
 
-  const matcher = new IgnoreMatcher(config.dirs[0]?.path || process.cwd(), {
+  const matcher = new IgnoreMatcher(config.dirs.map(d => d.path), {
     globalPatterns: config.ignore.patterns,
   })
 

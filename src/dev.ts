@@ -57,7 +57,7 @@ async function main() {
     }
   }
 
-  const matcher = new IgnoreMatcher(config.dirs[0]?.path || process.cwd(), {
+  const matcher = new IgnoreMatcher(config.dirs.map(d => d.path), {
     globalPatterns: config.ignore.patterns,
   })
 

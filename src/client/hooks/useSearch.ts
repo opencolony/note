@@ -5,6 +5,7 @@ interface FileNode {
   name: string
   path: string
   type: 'file' | 'directory'
+  rootPath?: string
   children?: FileNode[]
 }
 
@@ -12,29 +13,38 @@ interface SearchDocument {
   path: string
   name: string
   content: string
+  rootPath: string
+  rootName: string
 }
 
 export interface SearchResult {
   path: string
   name: string
+  rootPath: string
+  rootName: string
   matchedContent?: string
   source: 'name' | 'content'
 }
 
-function collectFilePaths(nodes: FileNode[]): string[] {
-  const paths: string[] = []
+function collectFileNodes(nodes: FileNode[]): { path: string; rootPath: string; rootName: string }[] {
+  const result: { path: string; rootPath: string; rootName: string }[] = []
   
-  function traverse(node: FileNode) {
+  function traverse(node: FileNode, rootPath: string, rootName: string) {
     if (node.type === 'file') {
-      paths.push(node.path)
+      result.push({ path: node.path, rootPath: node.rootPath || rootPath, rootName })
     }
     if (node.children) {
-      node.children.forEach(traverse)
+      node.children.forEach(child => traverse(child, node.rootPath || rootPath, rootName))
     }
   }
   
-  nodes.forEach(traverse)
-  return paths
+  nodes.forEach(node => {
+    const rPath = node.rootPath || ''
+    const rName = rPath.split('/').pop() || rPath
+    traverse(node, rPath, rName)
+  })
+  
+  return result
 }
 
 export function useSearch() {
@@ -65,13 +75,13 @@ export function useSearch() {
       const index = initIndex()
       docsRef.current.clear()
       
-      const paths = collectFilePaths(files)
-      if (paths.length === 0) {
+      const fileInfos = collectFileNodes(files)
+      if (fileInfos.length === 0) {
         setIsIndexing(false)
         return
       }
 
-      const pathsParam = paths.join(',')
+      const pathsParam = fileInfos.map(f => f.path).join(',')
       const res = await fetch(`/api/files/content?paths=${encodeURIComponent(pathsParam)}`)
       
       if (!res.ok) {
@@ -81,10 +91,13 @@ export function useSearch() {
       const data = await res.json()
       
       for (const file of data.files) {
+        const fileInfo = fileInfos.find(f => f.path === file.path)
         const doc: SearchDocument = {
           path: file.path,
           name: file.name,
-          content: file.content.slice(0, 100000)
+          content: file.content.slice(0, 100000),
+          rootPath: fileInfo?.rootPath || '',
+          rootName: fileInfo?.rootName || '',
         }
         docsRef.current.set(file.path, doc)
         index.add(doc)
@@ -114,6 +127,8 @@ export function useSearch() {
           results.push({
             path: doc.path,
             name: doc.name,
+            rootPath: doc.rootPath,
+            rootName: doc.rootName,
             source: 'name'
           })
         }
@@ -141,6 +156,8 @@ export function useSearch() {
           results.push({
             path: doc.path,
             name: doc.name,
+            rootPath: doc.rootPath,
+            rootName: doc.rootName,
             matchedContent,
             source: 'content'
           })
@@ -151,13 +168,16 @@ export function useSearch() {
     return results
   }, [])
 
-  const updateIndex = useCallback((path: string, name: string, content: string) => {
+  const updateIndex = useCallback((path: string, name: string, content: string, rootPath?: string, rootName?: string) => {
     if (!indexRef.current) return
     
+    const existing = docsRef.current.get(path)
     const doc: SearchDocument = {
       path,
       name,
-      content: content.slice(0, 100000)
+      content: content.slice(0, 100000),
+      rootPath: rootPath || existing?.rootPath || '',
+      rootName: rootName || existing?.rootName || '',
     }
     
     docsRef.current.set(path, doc)
