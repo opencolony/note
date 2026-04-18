@@ -122,7 +122,7 @@ const SidebarContent = memo(function SidebarContent({
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-1 px-4 py-2 border-b border-border shrink-0 overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-1 px-4 py-2 border-b border-border shrink-0 overflow-x-auto dir-tabs-scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
           {groups.map(group => (
             <Button
               key={group.root.path}
@@ -130,7 +130,7 @@ const SidebarContent = memo(function SidebarContent({
               size="sm"
               onClick={() => onDirChange?.(group.root.path)}
               className={cn(
-                "whitespace-nowrap relative group",
+                "whitespace-nowrap relative group flex-shrink-0",
                 group.error && "border-destructive text-destructive hover:text-destructive"
               )}
               title={group.error || group.root.path}
@@ -138,7 +138,7 @@ const SidebarContent = memo(function SidebarContent({
               {group.error && (
                 <AlertCircle className="size-3 mr-1 text-destructive shrink-0" />
               )}
-              <span className="truncate max-w-[100px] md:max-w-[150px] min-w-0 flex-shrink-0">
+              <span className="flex-shrink-0">
                 {group.root.name || group.root.path.split('/').pop() || group.root.path}
               </span>
               {/* Desktop tooltip */}
@@ -147,8 +147,15 @@ const SidebarContent = memo(function SidebarContent({
               </span>
             </Button>
           ))}
-          <Button variant="ghost" size="icon" className="size-6" onClick={() => onAddDir?.()} title="添加目录">
-            <Plus className="size-4" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onAddDir?.()}
+            className="whitespace-nowrap flex-shrink-0"
+            title="添加目录"
+          >
+            <Plus className="size-4 mr-1" />
+            添加
           </Button>
         </div>
       )}

@@ -1058,3 +1058,13 @@
 .dark * {
   scrollbar-color: oklch(40% 0 0) oklch(20% 0 0);
 }
+
+/* Hide scrollbar for dir tabs */
+.dir-tabs-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.dir-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
