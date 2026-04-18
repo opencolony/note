@@ -346,7 +346,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
       results = fuzzysort.go(query, candidates, {
         key: 'name',
         limit: MAX_RESULTS,
-        threshold: -10000,
+        threshold: 0.5,
       }) as unknown as typeof results
     }
 
