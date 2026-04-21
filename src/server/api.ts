@@ -411,6 +411,42 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
   })
 
+  router.post('/search/content', async (c) => {
+    try {
+      const body = await c.req.json()
+      const paths: string[] = body.paths || []
+      if (paths.length === 0) return c.json({ error: 'paths array is required' }, 400)
+
+      const results: { path: string; name: string; content: string; hash: string }[] = []
+
+      for (const filePath of paths) {
+        const dirPath = findRootForPath(filePath, config)
+        if (!dirPath) continue
+
+        const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+        const fullPath = path.join(dirPath, relativePath)
+
+        if (!isAllowed(fullPath, config)) continue
+
+        try {
+          const stat = await fs.stat(fullPath)
+          if (stat.isFile()) {
+            const content = await fs.readFile(fullPath, 'utf-8')
+            // Simple hash: length + first/last 64 chars for quick diff
+            const hash = `${content.length}:${content.slice(0, 64)}|${content.slice(-64)}`
+            results.push({ path: filePath, name: path.basename(filePath), content, hash })
+          }
+        } catch {
+          // skip unreadable files
+        }
+      }
+
+      return c.json({ files: results })
+    } catch (e) {
+      return c.json({ error: 'Failed to fetch contents' }, 500)
+    }
+  })
+
   router.get('/content', async (c) => {
     const pathsParam = c.req.query('paths')
     if (!pathsParam) {

@@ -26,17 +26,19 @@ export function SearchDialog({ open, onOpenChange, files, onSelect }: SearchDial
   const [isMobile, setIsMobile] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { buildIndex, search, isIndexing } = useSearch()
-  const hasBuiltIndex = useRef(false)
+  const prevFilesRef = useRef<string>('')
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768)
   }, [])
 
   useEffect(() => {
-    if (open && !hasBuiltIndex.current) {
-      buildIndex(files)
-      hasBuiltIndex.current = true
-    } else if (open && hasBuiltIndex.current) {
+    if (!open) return
+
+    // Only rebuild index when the file tree actually changed
+    const filesKey = JSON.stringify(files.map(f => ({ path: f.path, name: f.name })))
+    if (filesKey !== prevFilesRef.current) {
+      prevFilesRef.current = filesKey
       buildIndex(files)
     }
   }, [open, files, buildIndex])

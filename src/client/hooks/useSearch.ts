@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import FlexSearch from 'flexsearch'
+import * as searchDB from '@/client/lib/searchDB'
 
 interface FileNode {
   name: string
@@ -17,6 +18,44 @@ interface SearchDocument {
   rootName: string
 }
 
+function computeHash(content: string): string {
+  return `${content.length}:${content.slice(0, 64)}|${content.slice(-64)}`
+}
+
+function collectFileNodes(nodes: FileNode[]): { path: string; rootPath: string; rootName: string }[] {
+  const result: { path: string; rootPath: string; rootName: string }[] = []
+
+  function traverse(node: FileNode, rootPath: string, rootName: string) {
+    if (node.type === 'file') {
+      result.push({ path: node.path, rootPath: node.rootPath || rootPath, rootName })
+    }
+    if (node.children) {
+      node.children.forEach(child => traverse(child, node.rootPath || rootPath, rootName))
+    }
+  }
+
+  nodes.forEach(node => {
+    const rPath = node.rootPath || ''
+    const rName = rPath.split('/').pop() || rPath
+    traverse(node, rPath, rName)
+  })
+
+  return result
+}
+
+const FETCH_BATCH_SIZE = 50
+
+async function fetchBatchContent(paths: string[]): Promise<{ path: string; name: string; content: string; hash: string }[]> {
+  const res = await fetch('/api/files/search/content', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths }),
+  })
+  if (!res.ok) throw new Error('Failed to fetch file contents')
+  const data = await res.json()
+  return data.files || []
+}
+
 export interface SearchResult {
   path: string
   name: string
@@ -26,34 +65,14 @@ export interface SearchResult {
   source: 'name' | 'content'
 }
 
-function collectFileNodes(nodes: FileNode[]): { path: string; rootPath: string; rootName: string }[] {
-  const result: { path: string; rootPath: string; rootName: string }[] = []
-  
-  function traverse(node: FileNode, rootPath: string, rootName: string) {
-    if (node.type === 'file') {
-      result.push({ path: node.path, rootPath: node.rootPath || rootPath, rootName })
-    }
-    if (node.children) {
-      node.children.forEach(child => traverse(child, node.rootPath || rootPath, rootName))
-    }
-  }
-  
-  nodes.forEach(node => {
-    const rPath = node.rootPath || ''
-    const rName = rPath.split('/').pop() || rPath
-    traverse(node, rPath, rName)
-  })
-  
-  return result
-}
-
 export function useSearch() {
   const [isIndexing, setIsIndexing] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const indexRef = useRef<any>(null)
   const docsRef = useRef<Map<string, SearchDocument>>(new Map())
+  const initPromiseRef = useRef<Promise<void> | null>(null)
 
-  const initIndex = useCallback(() => {
+  const ensureIndex = useCallback(() => {
     if (!indexRef.current) {
       indexRef.current = new FlexSearch.Document({
         document: {
@@ -69,45 +88,93 @@ export function useSearch() {
   }, [])
 
   const buildIndex = useCallback(async (files: FileNode[]) => {
-    setIsIndexing(true)
-    
-    try {
-      const index = initIndex()
-      docsRef.current.clear()
-      
-      const fileInfos = collectFileNodes(files)
-      if (fileInfos.length === 0) {
-        setIsIndexing(false)
-        return
-      }
-
-      const pathsParam = fileInfos.map(f => f.path).join(',')
-      const res = await fetch(`/api/files/content?paths=${encodeURIComponent(pathsParam)}`)
-      
-      if (!res.ok) {
-        throw new Error('Failed to fetch file contents')
-      }
-
-      const data = await res.json()
-      
-      for (const file of data.files) {
-        const fileInfo = fileInfos.find(f => f.path === file.path)
-        const doc: SearchDocument = {
-          path: file.path,
-          name: file.name,
-          content: file.content.slice(0, 100000),
-          rootPath: fileInfo?.rootPath || '',
-          rootName: fileInfo?.rootName || '',
-        }
-        docsRef.current.set(file.path, doc)
-        index.add(doc)
-      }
-    } catch (e) {
-      console.error('Failed to build search index:', e)
-    } finally {
-      setIsIndexing(false)
+    // Prevent concurrent builds
+    if (initPromiseRef.current) {
+      await initPromiseRef.current
+      return
     }
-  }, [initIndex])
+
+    const p = (async () => {
+      setIsIndexing(true)
+
+      try {
+        const index = ensureIndex()
+        const fileInfos = collectFileNodes(files)
+
+        if (fileInfos.length === 0) return
+
+        const currentPaths = new Set(fileInfos.map(f => f.path))
+        const cachedDocs = await searchDB.getAllDocs()
+        const cacheMap = new Map(cachedDocs.map(d => [d.path, d]))
+
+        // Remove cached docs that no longer exist in the tree
+        for (const [cachedPath] of cacheMap) {
+          if (!currentPaths.has(cachedPath)) {
+            index.remove(cachedPath)
+            docsRef.current.delete(cachedPath)
+            await searchDB.deleteDoc(cachedPath)
+          }
+        }
+
+        // Determine which files need fetching: only files NOT in cache
+        const needFetch: string[] = []
+        for (const fi of fileInfos) {
+          if (!cacheMap.has(fi.path)) {
+            needFetch.push(fi.path)
+          } else {
+            // Restore from cache directly — no network needed
+            const cached = cacheMap.get(fi.path)!
+            const doc: SearchDocument = {
+              path: cached.path,
+              name: cached.name,
+              content: cached.content,
+              rootPath: cached.rootPath,
+              rootName: cached.rootName,
+            }
+            docsRef.current.set(fi.path, doc)
+            index.add(doc)
+          }
+        }
+
+        // Fetch only new files in batches
+        for (let i = 0; i < needFetch.length; i += FETCH_BATCH_SIZE) {
+          const batch = needFetch.slice(i, i + FETCH_BATCH_SIZE)
+          const results = await fetchBatchContent(batch)
+
+          for (const file of results) {
+            const fileInfo = fileInfos.find(f => f.path === file.path)
+            const doc: SearchDocument = {
+              path: file.path,
+              name: file.name,
+              content: file.content.slice(0, 100000),
+              rootPath: fileInfo?.rootPath || '',
+              rootName: fileInfo?.rootName || '',
+            }
+            docsRef.current.set(file.path, doc)
+            index.add(doc)
+
+            await searchDB.putDoc({
+              path: file.path,
+              name: file.name,
+              content: file.content.slice(0, 100000),
+              hash: file.hash,
+              rootPath: fileInfo?.rootPath || '',
+              rootName: fileInfo?.rootName || '',
+              updatedAt: Date.now(),
+            })
+          }
+        }
+      } catch (e) {
+        console.error('Failed to build search index:', e)
+      } finally {
+        setIsIndexing(false)
+        initPromiseRef.current = null
+      }
+    })()
+
+    initPromiseRef.current = p
+    await p
+  }, [ensureIndex])
 
   const search = useCallback((query: string): SearchResult[] => {
     if (!query.trim() || !indexRef.current) {
@@ -141,18 +208,18 @@ export function useSearch() {
         const doc = docsRef.current.get(String(item.id))
         if (doc && !seen.has(doc.path)) {
           seen.add(doc.path)
-          
+
           let matchedContent: string | undefined
           const lowerContent = doc.content.toLowerCase()
           const lowerQuery = query.toLowerCase()
           const idx = lowerContent.indexOf(lowerQuery)
-          
+
           if (idx !== -1) {
             const start = Math.max(0, idx - 30)
             const end = Math.min(doc.content.length, idx + query.length + 30)
             matchedContent = (start > 0 ? '...' : '') + doc.content.slice(start, end) + (end < doc.content.length ? '...' : '')
           }
-          
+
           results.push({
             path: doc.path,
             name: doc.name,
@@ -168,27 +235,48 @@ export function useSearch() {
     return results
   }, [])
 
-  const updateIndex = useCallback((path: string, name: string, content: string, rootPath?: string, rootName?: string) => {
+  const updateIndex = useCallback(async (path: string, name: string, content: string, rootPath?: string, rootName?: string) => {
     if (!indexRef.current) return
-    
+
     const existing = docsRef.current.get(path)
+    const currentRootPath = rootPath || existing?.rootPath || ''
+    const currentRootName = rootName || existing?.rootName || ''
+
+    // Update in FlexSearch
+    if (docsRef.current.has(path)) {
+      indexRef.current.remove(path)
+    }
+
     const doc: SearchDocument = {
       path,
       name,
       content: content.slice(0, 100000),
-      rootPath: rootPath || existing?.rootPath || '',
-      rootName: rootName || existing?.rootName || '',
+      rootPath: currentRootPath,
+      rootName: currentRootName,
     }
-    
+
     docsRef.current.set(path, doc)
-    indexRef.current.update(doc)
+    indexRef.current.add(doc)
+
+    // Update IndexedDB cache
+    const hash = computeHash(content)
+    await searchDB.putDoc({
+      path,
+      name,
+      content: content.slice(0, 100000),
+      hash,
+      rootPath: currentRootPath,
+      rootName: currentRootName,
+      updatedAt: Date.now(),
+    })
   }, [])
 
-  const removeFromIndex = useCallback((path: string) => {
+  const removeFromIndex = useCallback(async (path: string) => {
     if (!indexRef.current) return
-    
+
     docsRef.current.delete(path)
     indexRef.current.remove(path)
+    await searchDB.deleteDoc(path)
   }, [])
 
   return {
