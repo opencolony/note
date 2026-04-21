@@ -56,6 +56,17 @@ async function fetchBatchContent(paths: string[]): Promise<{ path: string; name:
   return data.files || []
 }
 
+async function fetchBatchHashes(paths: string[]): Promise<{ path: string; hash: string }[]> {
+  const res = await fetch('/api/files/search/hashes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths }),
+  })
+  if (!res.ok) throw new Error('Failed to fetch file hashes')
+  const data = await res.json()
+  return data.files || []
+}
+
 export interface SearchResult {
   path: string
   name: string
@@ -116,14 +127,28 @@ export function useSearch() {
           }
         }
 
-        // Determine which files need fetching: only files NOT in cache
+        // Step 1: Fetch hashes for ALL files (lightweight, no content)
+        const allPaths = fileInfos.map(f => f.path)
+        const hashMap = new Map<string, string>()
+        for (let i = 0; i < allPaths.length; i += FETCH_BATCH_SIZE) {
+          const batch = allPaths.slice(i, i + FETCH_BATCH_SIZE)
+          const hashes = await fetchBatchHashes(batch)
+          for (const h of hashes) {
+            hashMap.set(h.path, h.hash)
+          }
+        }
+
+        // Step 2: Determine which files need content fetch
         const needFetch: string[] = []
         for (const fi of fileInfos) {
-          if (!cacheMap.has(fi.path)) {
+          const cached = cacheMap.get(fi.path)
+          const serverHash = hashMap.get(fi.path)
+
+          if (!cached || cached.hash !== serverHash) {
+            // New file or content changed — need to fetch
             needFetch.push(fi.path)
           } else {
-            // Restore from cache directly — no network needed
-            const cached = cacheMap.get(fi.path)!
+            // Hash matches — restore from cache, no network needed
             const doc: SearchDocument = {
               path: cached.path,
               name: cached.name,
@@ -136,7 +161,7 @@ export function useSearch() {
           }
         }
 
-        // Fetch only new files in batches
+        // Step 3: Fetch only changed/new files in batches
         for (let i = 0; i < needFetch.length; i += FETCH_BATCH_SIZE) {
           const batch = needFetch.slice(i, i + FETCH_BATCH_SIZE)
           const results = await fetchBatchContent(batch)

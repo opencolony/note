@@ -411,6 +411,41 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
   })
 
+  router.post('/search/hashes', async (c) => {
+    try {
+      const body = await c.req.json()
+      const paths: string[] = body.paths || []
+      if (paths.length === 0) return c.json({ error: 'paths array is required' }, 400)
+
+      const results: { path: string; hash: string }[] = []
+
+      for (const filePath of paths) {
+        const dirPath = findRootForPath(filePath, config)
+        if (!dirPath) continue
+
+        const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+        const fullPath = path.join(dirPath, relativePath)
+
+        if (!isAllowed(fullPath, config)) continue
+
+        try {
+          const stat = await fs.stat(fullPath)
+          if (stat.isFile()) {
+            // Quick hash: size + mtime, no need to read content
+            const hash = `size:${stat.size}:mtime:${stat.mtimeMs}`
+            results.push({ path: filePath, hash })
+          }
+        } catch {
+          // skip unreadable files
+        }
+      }
+
+      return c.json({ files: results })
+    } catch (e) {
+      return c.json({ error: 'Failed to fetch hashes' }, 500)
+    }
+  })
+
   router.post('/search/content', async (c) => {
     try {
       const body = await c.req.json()
