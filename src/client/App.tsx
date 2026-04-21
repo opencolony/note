@@ -96,15 +96,15 @@ const SidebarContent = memo(function SidebarContent({
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="logo" className="size-8 shrink-0" />
+          <span className="font-semibold text-sm">ColonyNote</span>
+        </div>
+        <div className="flex gap-1">
           {onClose && (
             <Button variant="ghost" size="icon" onClick={onClose} title="关闭" className="md:hidden">
               <X className="size-4" />
             </Button>
           )}
-          <img src="/logo.png" alt="logo" className="size-8 shrink-0" />
-          <span className="font-semibold text-sm">ColonyNote</span>
-        </div>
-        <div className="flex gap-1">
           <Button variant="ghost" size="icon" onClick={onSettingsOpen} title="设置">
             <Settings className="size-4" />
           </Button>
