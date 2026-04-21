@@ -20,7 +20,7 @@ import mermaid from 'mermaid'
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { Maximize2 } from 'lucide-react'
 import { MermaidFullscreenDialog } from './MermaidFullscreenDialog'
-import { MobileToolbar } from './MobileToolbar'
+import { EditorToolbar } from './EditorToolbar'
 
 const isDarkMode = () => document.documentElement.classList.contains('dark')
 
@@ -371,8 +371,9 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
 
   return (
     <div className="tiptap-editor-wrapper">
+      {mode === 'wysiwyg' && !isMobile && <EditorToolbar editor={editor} variant="desktop" />}
       <EditorContent editor={editor} className="tiptap-editor" />
-      {isMobile && mode === 'wysiwyg' && <MobileToolbar editor={editor} />}
+      {isMobile && mode === 'wysiwyg' && <EditorToolbar editor={editor} variant="mobile" />}
     </div>
   )
 }

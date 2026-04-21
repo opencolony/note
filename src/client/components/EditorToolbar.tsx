@@ -10,8 +10,9 @@ import {
   Code,
 } from 'lucide-react'
 
-interface MobileToolbarProps {
+interface EditorToolbarProps {
   editor: Editor | null
+  variant?: 'desktop' | 'mobile'
 }
 
 interface ToolbarButtonConfig {
@@ -72,13 +73,13 @@ const toolbarButtons: ToolbarButtonConfig[] = [
   },
 ]
 
-export function MobileToolbar({ editor }: MobileToolbarProps) {
+export function EditorToolbar({ editor, variant = 'mobile' }: EditorToolbarProps) {
   if (!editor) {
     return null
   }
 
   return (
-    <div className="mobile-toolbar">
+    <div className={`editor-toolbar editor-toolbar-${variant}`}>
       {toolbarButtons.map((btn) => {
         const Icon = btn.icon
         const active = btn.isActive(editor)
@@ -87,7 +88,7 @@ export function MobileToolbar({ editor }: MobileToolbarProps) {
             key={btn.label}
             type="button"
             contentEditable={false}
-            className={`mobile-toolbar-btn ${active ? 'active' : ''}`}
+            className={`editor-toolbar-btn ${active ? 'active' : ''}`}
             onClick={() => btn.action(editor)}
             title={btn.label}
             aria-label={btn.label}

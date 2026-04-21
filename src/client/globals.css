@@ -1069,21 +1069,32 @@
   display: none;
 }
 
-/* Mobile Toolbar Styles */
-.mobile-toolbar {
-  @apply flex items-center gap-1 px-2 py-1 border-t border-border bg-background;
+/* Editor Toolbar Styles */
+.editor-toolbar {
+  @apply flex items-center gap-1 border-border bg-background;
+  flex-shrink: 0;
+}
+
+/* Desktop variant - top of editor, no scroll */
+.editor-toolbar-desktop {
+  @apply px-3 py-2 border-b;
+  overflow-x: visible;
+}
+
+/* Mobile variant - bottom of editor, horizontal scroll */
+.editor-toolbar-mobile {
+  @apply px-2 py-1 border-t;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  flex-shrink: 0;
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-.mobile-toolbar::-webkit-scrollbar {
+.editor-toolbar-mobile::-webkit-scrollbar {
   display: none;
 }
 
-.mobile-toolbar-btn {
-  @apply flex items-center justify-center size-11 min-h-11 min-w-11 rounded-lg shrink-0 transition-colors;
+.editor-toolbar-btn {
+  @apply flex items-center justify-center size-9 min-h-9 min-w-9 rounded-lg shrink-0 transition-colors;
   color: var(--color-muted-foreground);
   background: transparent;
   border: none;
@@ -1091,19 +1102,19 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-toolbar-btn:hover {
+.editor-toolbar-btn:hover {
   @apply bg-accent text-accent-foreground;
 }
 
-.mobile-toolbar-btn:active {
+.editor-toolbar-btn:active {
   transform: scale(0.92);
 }
 
-.mobile-toolbar-btn.active {
+.editor-toolbar-btn.active {
   @apply bg-primary/10 text-primary;
 }
 
-/* Ensure editor content has bottom padding so toolbar doesn't overlap */
+/* Ensure editor content has bottom padding on mobile so toolbar doesn't overlap */
 @media (max-width: 767px) {
   .tiptap-editor .tiptap {
     padding-bottom: 4rem;

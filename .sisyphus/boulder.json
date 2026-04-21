@@ -1,23 +1,12 @@
 {
-  "active_plan": "/home/yuexiaoliang/projects/colonynote/.sisyphus/plans/fix-ignore-search.md",
-  "started_at": "2026-04-18T04:57:14.884Z",
+  "active_plan": "/home/yuexiaoliang/projects/note/.sisyphus/plans/desktop-toolbar.md",
+  "started_at": "2026-04-21T01:06:39.597Z",
   "session_ids": [
-    "ses_2650244e7ffePBXlqrfoGk1NLP"
+    "ses_252851875ffeKQF0OZEjuc5BdA"
   ],
   "session_origins": {
-    "ses_2650244e7ffePBXlqrfoGk1NLP": "direct"
+    "ses_252851875ffeKQF0OZEjuc5BdA": "direct"
   },
-  "plan_name": "fix-ignore-search",
-  "agent": "atlas",
-  "task_sessions": {
-    "todo:1": {
-      "task_key": "todo:1",
-      "task_label": "1",
-      "task_title": "修改 traverse 函数添加忽略检查",
-      "session_id": "ses_2610b0670ffeAQBTvs8xa5TNBE",
-      "agent": "Sisyphus-Junior",
-      "category": "quick",
-      "updated_at": "2026-04-18T04:59:32.453Z"
-    }
-  }
+  "plan_name": "desktop-toolbar",
+  "agent": "atlas"
 }
