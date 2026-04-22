@@ -1146,6 +1146,12 @@
   @apply bg-primary/10 text-primary;
 }
 
+.editor-toolbar-separator {
+  @apply w-px h-5 shrink-0;
+  background: var(--color-border);
+  margin: 0 4px;
+}
+
 /* Heading Dropdown */
 .editor-toolbar-heading {
   position: relative;

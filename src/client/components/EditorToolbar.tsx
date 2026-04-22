@@ -7,8 +7,9 @@ import {
   ListOrdered,
   Quote,
   Code,
+  Copy,
 } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 interface EditorToolbarProps {
   editor: Editor | null
@@ -150,6 +151,30 @@ export function EditorToolbar({ editor, variant = 'mobile' }: EditorToolbarProps
     return null
   }
 
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyPlainText = useCallback(async () => {
+    const { from, to } = editor.state.selection
+    const text = from === to
+      ? editor.getText()
+      : editor.state.doc.textBetween(from, to, '\n')
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }, [editor])
+
   return (
     <div className={`editor-toolbar editor-toolbar-${variant}`}>
       <HeadingDropdown editor={editor} variant={variant} />
@@ -171,6 +196,17 @@ export function EditorToolbar({ editor, variant = 'mobile' }: EditorToolbarProps
           </button>
         )
       })}
+      <div className="editor-toolbar-separator" />
+      <button
+        type="button"
+        contentEditable={false}
+        className={`editor-toolbar-btn ${copied ? 'active' : ''}`}
+        onClick={handleCopyPlainText}
+        title="复制纯文本"
+        aria-label="复制纯文本"
+      >
+        <Copy className="size-5" />
+      </button>
     </div>
   )
 }
