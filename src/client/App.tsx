@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
-import { Plus, Code, Eye, List, FileText, Folder, FolderOpen, Search, X, Settings, GripVertical, AlertCircle, Sun, Moon, Monitor } from 'lucide-react'
+import { Plus, Code, Eye, List, FileText, Folder, FolderOpen, Search, X, Settings, AlertCircle, Sun, Moon, Monitor } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
-import { useFile } from './hooks/useFile'
+import { useTabs } from './hooks/useTabs'
 import { FileTree } from './components/FileTree'
 import { TipTapEditor } from './components/TipTapEditor'
+import { TabBar } from './components/TabBar'
 import { CreateFileModal } from './components/CreateFileModal'
 import { SearchDialog } from './components/SearchDialog'
 import { RenameDialog } from './components/RenameDialog'
@@ -211,8 +212,6 @@ function App() {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
   const dirExpandedPathsRef = useRef<Map<string, Set<string>>>(new Map())
   const [editingType, setEditingType] = useState<'file' | 'directory' | null>(null)
-  const [refreshDialogOpen, setRefreshDialogOpen] = useState(false)
-  const [pendingExternalChange, setPendingExternalChange] = useState<string | null>(null)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   const [addDirDialogOpen, setAddDirDialogOpen] = useState(false)
   const [editDirDialogOpen, setEditDirDialogOpen] = useState(false)
@@ -223,7 +222,9 @@ function App() {
     return 'system'
   })
 
-  const [isSaving, setIsSaving] = useState(false)
+  // Close tab confirmation state
+  const [closingTabPath, setClosingTabPath] = useState<string | null>(null)
+
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window === 'undefined') return 260
     const saved = localStorage.getItem('sidebar-width')
@@ -233,61 +234,23 @@ function App() {
   const fetchingRef = useRef(false)
   const loadingRef = useRef<string | null>(null)
   const scrollPositionRef = useRef<number>(0)
-  // 用于跟踪自己发起的保存会话，避免在网络差时误判为外部修改
-  // key: 文件路径, value: 保存会话ID集合
-  const pendingSaveSessionsRef = useRef<Map<string, Set<string>>>(new Map())
-  // 用于记录最近保存成功的时间戳，用于辅助判断是否是外部修改
-  const lastSelfSaveTimeRef = useRef<Map<string, number>>(new Map())
-  // 保存后忽略外部变更的缓冲时间（毫秒）
-  const SAVE_IGNORE_BUFFER_MS = 5000
 
   const {
-    content,
-    path,
-    status,
-    load,
-    updateContent,
-    save,
-    setPath,
-    setContent,
-  } = useFile({
-    onSaveStart: (filePath: string, sessionId: string) => {
-      setIsSaving(true)
-      // 记录保存会话，用于区分自己保存和外部修改
-      const sessions = pendingSaveSessionsRef.current.get(filePath) || new Set<string>()
-      sessions.add(sessionId)
-      pendingSaveSessionsRef.current.set(filePath, sessions)
-      // 记录保存时间
-      lastSelfSaveTimeRef.current.set(filePath, Date.now())
-    },
-    onSave: (filePath?: string) => {
-      setIsSaving(false)
-      const targetPath = filePath || path
-      if (!targetPath) return
-      // 延迟清除会话，以应对网络延迟导致的 WebSocket 消息延迟
-      setTimeout(() => {
-        const sessions = pendingSaveSessionsRef.current.get(targetPath)
-        if (sessions) {
-          // 保留较新的会话，只清除旧的
-          const now = Date.now()
-          const cutoffTime = now - SAVE_IGNORE_BUFFER_MS
-          const savedTime = lastSelfSaveTimeRef.current.get(targetPath)
-          if (savedTime && savedTime < cutoffTime) {
-            pendingSaveSessionsRef.current.delete(targetPath)
-            lastSelfSaveTimeRef.current.delete(targetPath)
-          }
-        }
-      }, SAVE_IGNORE_BUFFER_MS)
-    },
-    onError: (e, filePath?: string) => {
-      setIsSaving(false)
-      const targetPath = filePath || path
-      if (targetPath) {
-        pendingSaveSessionsRef.current.delete(targetPath)
-        lastSelfSaveTimeRef.current.delete(targetPath)
-      }
-      console.error(e)
-    },
+    tabs,
+    tabOrder,
+    activeTabPath,
+    openTab,
+    closeTab,
+    updateTabContent,
+    saveTab,
+    saveAllTabs,
+    isTabDirty,
+    getActiveTab,
+    handleWsFileChange,
+  } = useTabs({
+    onSaveStart: () => {},
+    onSave: () => {},
+    onError: (e) => console.error(e),
   })
 
   useEffect(() => {
@@ -346,8 +309,8 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!path) return
-    const parts = path.split('/').filter(Boolean)
+    if (!activeTabPath) return
+    const parts = activeTabPath.split('/').filter(Boolean)
     const dirs: string[] = []
     for (let i = 0; i < parts.length - 1; i++) {
       dirs.push('/' + parts.slice(0, i + 1).join('/'))
@@ -359,7 +322,7 @@ function App() {
         return next
       })
     }
-  }, [path])
+  }, [activeTabPath])
 
   const fetchFiles = useCallback(async () => {
     if (fetchingRef.current) return
@@ -401,11 +364,8 @@ function App() {
         // Check if activeDir still exists
         const rootStillExists = data.groups?.some((g: { root: { path: string } }) => g.root.path === activeDir)
         if (!rootStillExists && activeDir) {
-          // Clear editor
-          setPath(null)
-          setContent('')
-          window.location.hash = ''
-          // Switch to first available root or null
+          // Close all tabs
+          tabOrder.forEach(p => closeTab(p))
           setActiveDir(data.groups?.[0]?.root.path || null)
         } else if (!activeDir && data.groups?.length > 0) {
           setActiveDir(data.groups[0].root.path)
@@ -416,7 +376,7 @@ function App() {
     }
     window.addEventListener('config-changed', handleConfigChanged)
     return () => window.removeEventListener('config-changed', handleConfigChanged)
-  }, [activeDir])
+  }, [activeDir, tabOrder, closeTab])
 
   useWebSocket(useCallback((data) => {
     if (data.type === 'file:change') {
@@ -424,36 +384,14 @@ function App() {
       const rootPath = data.rootPath
       if (!changedPath) return
 
-      // 检查变更是否属于当前活动目录
+      // Check if the changed path belongs to the active directory
       if (rootPath && activeDir && rootPath !== activeDir) {
         return
       }
 
-      // 检查是否是用户自己保存的文件
-      // 双重验证机制：1. 检查会话ID集合  2. 检查最近保存时间戳
-      const sessions = pendingSaveSessionsRef.current.get(changedPath)
-      const lastSaveTime = lastSelfSaveTimeRef.current.get(changedPath)
-      const now = Date.now()
-
-      // 如果存在未过期的保存会话或最近保存时间在缓冲期内，则视为自己的保存
-      if (sessions && sessions.size > 0) {
-        // 有活动的保存会话，忽略此变更通知
-        return
-      }
-
-      // 即使会话已清除，如果在缓冲期内有保存操作，也忽略
-      if (lastSaveTime && (now - lastSaveTime) < SAVE_IGNORE_BUFFER_MS) {
-        return
-      }
-
-      if (path && changedPath === path) {
-        setPendingExternalChange(changedPath)
-        setRefreshDialogOpen(true)
-      }
-
-      fetchFiles()
+      handleWsFileChange(changedPath, rootPath, fetchFiles)
     }
-  }, [fetchFiles, path, activeDir]))
+  }, [fetchFiles, activeDir, handleWsFileChange]))
 
   const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory', rootPath?: string) => {
     if (type === 'file') {
@@ -471,15 +409,14 @@ function App() {
       }
 
       const effectiveRoot = rootPath || activeDir
-      load(selectedPath, effectiveRoot || undefined)
-      window.location.hash = effectiveRoot ? `${effectiveRoot}:${selectedPath}` : selectedPath
+      openTab(selectedPath, effectiveRoot)
       const dir = selectedPath.substring(0, selectedPath.lastIndexOf('/'))
       setCurrentDir(dir)
       setDrawerVisible(false)
     } else {
       setCurrentDir(selectedPath)
     }
-  }, [load, activeDir])
+  }, [openTab, activeDir])
 
   const handleExpand = useCallback((path: string) => {
     setCurrentDir(path)
@@ -543,7 +480,7 @@ function App() {
       if (hash && loadingRef.current !== hash) {
         loadingRef.current = hash
         const colonIndex = hash.indexOf(':')
-        let rootPath: string | undefined
+        let rootPath: string | null = null
         let filePath: string
         if (colonIndex > 0) {
           rootPath = hash.substring(0, colonIndex)
@@ -555,12 +492,10 @@ function App() {
         // Guard: treat "/" or empty filePath as "no file selected"
         if (!filePath || filePath === '/') {
           loadingRef.current = null
-          setPath(null)
-          setContent('')
           return
         }
 
-        load(filePath, rootPath)
+        openTab(filePath, rootPath)
         if (rootPath) {
           setActiveDir(rootPath)
         }
@@ -583,7 +518,7 @@ function App() {
     handleHashChange()
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [load])
+  }, [openTab])
 
   const handleDeleteFile = useCallback(async (filePath: string) => {
     try {
@@ -591,19 +526,14 @@ function App() {
         ? `/api/files${filePath}?root=${encodeURIComponent(activeDir)}`
         : `/api/files${filePath}`
       await fetch(url, { method: 'DELETE' })
-      if (path && (path === filePath || path.startsWith(filePath + '/'))) {
-        loadingRef.current = null
-        window.location.hash = ''
-        setPath(null)
-        setContent('')
-        setRefreshDialogOpen(false)
-        setPendingExternalChange(null)
+      if (tabOrder.includes(filePath)) {
+        closeTab(filePath)
       }
       fetchFiles()
     } catch (e) {
       console.error('Failed to delete:', e)
     }
-  }, [fetchFiles, path, activeDir])
+  }, [fetchFiles, tabOrder, closeTab, activeDir])
 
   const handleRename = useCallback(async (filePath: string, newName: string) => {
     try {
@@ -626,18 +556,20 @@ function App() {
         }),
       })
 
-      if (path && (path === filePath || path.startsWith(filePath + '/'))) {
-        const updatedPath = path.replace(filePath, newPath)
-        loadingRef.current = null
-        window.location.hash = updatedPath
-        load(updatedPath)
-        setCurrentDir(parentPath ? parentPath : '')
+      // If the renamed file is open, close old tab and open new one
+      if (tabOrder.includes(filePath)) {
+        const activeTab = getActiveTab()
+        const wasActive = activeTabPath === filePath
+        closeTab(filePath)
+        if (wasActive) {
+          openTab(newPath, activeDir)
+        }
       }
       fetchFiles()
     } catch (e) {
       console.error('Failed to rename:', e)
     }
-  }, [path, load, fetchFiles])
+  }, [tabOrder, getActiveTab, activeTabPath, closeTab, openTab, fetchFiles, activeDir])
 
   const handleMove = useCallback(async (oldPath: string, newPath: string, sourceRoot: string, targetRoot: string) => {
     try {
@@ -657,18 +589,20 @@ function App() {
         }),
       })
 
-      if (path && (path === oldPath || path.startsWith(oldPath + '/'))) {
-        const updatedPath = path.replace(oldPath, newPath)
-        loadingRef.current = null
-        window.location.hash = updatedPath
-        load(updatedPath)
-        setCurrentDir(newPath.substring(0, newPath.lastIndexOf('/')))
+      // If the moved file is open, close old tab and open new one
+      if (tabOrder.includes(oldPath)) {
+        const activeTab = getActiveTab()
+        const wasActive = activeTabPath === oldPath
+        closeTab(oldPath)
+        if (wasActive) {
+          openTab(newPath, targetRoot)
+        }
       }
       fetchFiles()
     } catch (e) {
       console.error('Failed to move:', e)
     }
-  }, [path, load, fetchFiles])
+  }, [tabOrder, getActiveTab, activeTabPath, closeTab, openTab, fetchFiles])
 
   const handleCopy = useCallback(async (sourcePath: string, targetPath: string, sourceRoot: string, targetRoot: string) => {
     try {
@@ -710,10 +644,8 @@ function App() {
   }, [activeDir, fetchFiles])
 
   const handleSave = useCallback(() => {
-    if (path && content) {
-      save(content, path, activeDir ?? undefined)
-    }
-  }, [save, content, path, activeDir])
+    saveAllTabs()
+  }, [saveAllTabs])
 
   const handleToggleEditorMode = useCallback(() => {
     setEditorMode(prev => {
@@ -750,20 +682,23 @@ function App() {
     document.body.style.userSelect = 'none'
   }, [])
 
+  const handleResizeEnd = useCallback(() => {
+    if (isResizingRef.current) {
+      isResizingRef.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      setSidebarWidth(w => {
+        localStorage.setItem('sidebar-width', w.toString())
+        return w
+      })
+    }
+  }, [])
+
   useEffect(() => {
     const handleResizeMove = (e: MouseEvent) => {
       if (!isResizingRef.current) return
       const newWidth = Math.max(200, Math.min(600, e.clientX))
       setSidebarWidth(newWidth)
-    }
-
-    const handleResizeEnd = () => {
-      if (isResizingRef.current) {
-        isResizingRef.current = false
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-        localStorage.setItem('sidebar-width', sidebarWidth.toString())
-      }
     }
 
     window.addEventListener('mousemove', handleResizeMove)
@@ -773,15 +708,29 @@ function App() {
       window.removeEventListener('mousemove', handleResizeMove)
       window.removeEventListener('mouseup', handleResizeEnd)
     }
-  }, [sidebarWidth])
+  }, [handleResizeEnd])
 
-  const fileName = path ? path.split('/').pop() : null
+  const activeTab = getActiveTab()
+  const fileName = activeTab ? activeTab.path.split('/').pop() : null
 
   const allFiles = fileGroups.flatMap(g => g.files)
 
   useEffect(() => {
     document.title = fileName ? `${fileName} - ColonyNote` : 'ColonyNote'
   }, [fileName])
+
+  // beforeunload guard for dirty tabs
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasDirty = tabOrder.some(p => isTabDirty(p))
+      if (hasDirty) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [tabOrder, isTabDirty])
 
   return (
     <div className="flex flex-col h-full">
@@ -808,7 +757,7 @@ function App() {
             {drawerVisible && (
               <div className="fixed inset-0 z-50 bg-black/80 animate-fade-in" onClick={() => setDrawerVisible(false)} />
             )}
-            <aside 
+            <aside
               className={cn(
                 "fixed z-50 inset-0 w-full bg-sidebar p-0 transition-transform duration-150",
                 drawerVisible ? "translate-x-0" : "-translate-x-full"
@@ -816,8 +765,8 @@ function App() {
             >
               <SidebarContent
                 groups={fileGroups}
-                activePath={path}
-        activeRoot={activeDir}
+                activePath={activeTabPath}
+                activeRoot={activeDir}
                 currentDir={currentDir}
                 expandedPaths={expandedPaths}
                 setExpandedPaths={setExpandedPaths}
@@ -856,38 +805,38 @@ function App() {
           <div className="hidden md:flex shrink-0">
             <aside style={{ width: sidebarWidth }} className="flex flex-col border-r border-border bg-sidebar">
               <SidebarContent
-              groups={fileGroups}
-              activePath={path}
-              activeRoot={activeDir}
-              currentDir={currentDir}
-              expandedPaths={expandedPaths}
-              setExpandedPaths={setExpandedPaths}
-              onSelect={handleSelectFile}
-              onDelete={handleDeleteFile}
-              onRenameRequest={(item) => {
-                setRenameItem(item)
-                setRenameDialogOpen(true)
-              }}
-              onMoveRequest={(item) => {
-                setMoveItem(item)
-                setMoveModalOpen(true)
-              }}
-              onCopyRequest={(item) => {
-                setCopyItem(item)
-                setCopyModalOpen(true)
-              }}
-              onExpand={handleExpand}
-              editingType={editingType}
-              onEditingChange={handleEditingChange}
-              onCreateSubmit={handleCreateSubmit}
-              onCreateRequest={handleCreateRequest}
-              onSettingsOpen={() => setSettingsDialogOpen(true)}
-              onDirChange={handleDirChange}
-              onAddDir={() => setAddDirDialogOpen(true)}
-              onEditDir={() => { setEditDirPath(activeDir); setEditDirDialogOpen(true) }}
-              onToggleTheme={handleToggleTheme}
-              themeMode={themeMode}
-            />
+                groups={fileGroups}
+                activePath={activeTabPath}
+                activeRoot={activeDir}
+                currentDir={currentDir}
+                expandedPaths={expandedPaths}
+                setExpandedPaths={setExpandedPaths}
+                onSelect={handleSelectFile}
+                onDelete={handleDeleteFile}
+                onRenameRequest={(item) => {
+                  setRenameItem(item)
+                  setRenameDialogOpen(true)
+                }}
+                onMoveRequest={(item) => {
+                  setMoveItem(item)
+                  setMoveModalOpen(true)
+                }}
+                onCopyRequest={(item) => {
+                  setCopyItem(item)
+                  setCopyModalOpen(true)
+                }}
+                onExpand={handleExpand}
+                editingType={editingType}
+                onEditingChange={handleEditingChange}
+                onCreateSubmit={handleCreateSubmit}
+                onCreateRequest={handleCreateRequest}
+                onSettingsOpen={() => setSettingsDialogOpen(true)}
+                onDirChange={handleDirChange}
+                onAddDir={() => setAddDirDialogOpen(true)}
+                onEditDir={() => { setEditDirPath(activeDir); setEditDirDialogOpen(true) }}
+                onToggleTheme={handleToggleTheme}
+                themeMode={themeMode}
+              />
             </aside>
             <div
               onMouseDown={handleResizeStart}
@@ -900,57 +849,72 @@ function App() {
         )}
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          {!isMobile && path && (
-            <header className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
-              <span>{fileName}</span>
-              <div className="flex items-center gap-2">
-                <span className={cn(
-                  "px-2 py-0.5 rounded text-xs",
-                  status === 'saving' && "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
-                  status === 'saved' && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950",
-                  status === 'error' && "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950"
-                )}>
-                  {status === 'saving' ? '保存中...' : status === 'saved' ? '已保存' : status === 'error' ? '保存失败' : ''}
-                </span>
-                <Button variant="ghost" size="icon" className="size-8" onClick={() => setSearchDialogOpen(true)} title="搜索">
-                  <Search className="size-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="size-8" onClick={handleToggleEditorMode} title={editorMode === 'wysiwyg' ? '源码模式' : '所见即所得'}>
-                  {editorMode === 'wysiwyg' ? <Code className="size-4" /> : <Eye className="size-4" />}
-                </Button>
-              </div>
-            </header>
+          {/* Tab bar */}
+          {tabOrder.length > 0 && (
+            <TabBar
+              tabOrder={tabOrder}
+              tabs={tabs}
+              activeTabPath={activeTabPath}
+              onActivate={(p, rp) => openTab(p, rp)}
+              onCloseRequest={(p) => {
+                const dirty = isTabDirty(p)
+                if (dirty) {
+                  setClosingTabPath(p)
+                } else {
+                  closeTab(p)
+                }
+              }}
+              isMobile={isMobile}
+              rightContent={!isMobile && activeTabPath ? (
+                <>
+                  <span className={cn(
+                    "px-2 py-0.5 rounded",
+                    activeTab?.status === 'saving' && "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
+                    activeTab?.status === 'saved' && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950",
+                    activeTab?.status === 'error' && "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950"
+                  )}>
+                    {activeTab?.status === 'saving' ? '保存中...' : activeTab?.status === 'saved' ? '已保存' : activeTab?.status === 'error' ? '保存失败' : ''}
+                  </span>
+                  <Button variant="ghost" size="icon" className="size-7 min-h-7 min-w-7" onClick={() => setSearchDialogOpen(true)} title="搜索">
+                    <Search className="size-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="size-7 min-h-7 min-w-7" onClick={handleToggleEditorMode} title={editorMode === 'wysiwyg' ? '源码模式' : '所见即所得'}>
+                    {editorMode === 'wysiwyg' ? <Code className="size-3.5" /> : <Eye className="size-3.5" />}
+                  </Button>
+                </>
+              ) : undefined}
+            />
           )}
 
           <div className="flex flex-1 overflow-hidden">
-            {!path ? (
+            {!activeTabPath ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm text-center p-6 flex-1">
                 <FileText className="size-12 mb-4 opacity-50" />
                 <div>选择一个文件开始编辑</div>
               </div>
-            ) : (
+            ) : activeTab && (
               <div className="flex flex-col flex-1 min-w-0">
                 {isMobile && (
                   <header className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
                     <span>{editorMode === 'wysiwyg' ? '所见即所得' : '源码'}</span>
                     <span className={cn(
                       "px-2 py-0.5 rounded text-xs",
-                      status === 'saving' && "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
-                      status === 'saved' && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950"
+                      activeTab.status === 'saving' && "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
+                      activeTab.status === 'saved' && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950"
                     )}>
-                      {status === 'saving' ? '保存中...' : status === 'saved' ? '已保存' : ''}
+                      {activeTab.status === 'saving' ? '保存中...' : activeTab.status === 'saved' ? '已保存' : ''}
                     </span>
                   </header>
                 )}
                 <div className="flex-1 overflow-hidden">
                   <TipTapEditor
-                    key={path}
-                    value={content}
-                    onChange={updateContent}
+                    key={activeTab.path}
+                    value={activeTab.content}
+                    onChange={(val) => updateTabContent(activeTab.path, val)}
                     mode={editorMode}
-                    path={path}
+                    path={activeTab.path}
                     scrollPosition={scrollPositionRef.current}
-                    onLinkClick={(linkPath) => handleSelectFile(linkPath, 'file')}
+                    onLinkClick={(linkPath) => openTab(linkPath, activeTab.rootPath)}
                   />
                 </div>
               </div>
@@ -1015,27 +979,37 @@ function App() {
         }}
       />
 
-      <AlertDialog open={refreshDialogOpen} onOpenChange={setRefreshDialogOpen}>
+      <AlertDialog open={closingTabPath !== null} onOpenChange={(open) => { if (!open) setClosingTabPath(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>文件已更新</AlertDialogTitle>
+            <AlertDialogTitle>未保存的更改</AlertDialogTitle>
             <AlertDialogDescription>
-              当前文件已被外部修改。是否刷新内容？
+              此文件有未保存的更改。确定要关闭吗？
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setPendingExternalChange(null)
-            }}>
-              忽略
+            <AlertDialogCancel onClick={() => setClosingTabPath(null)}>
+              取消
             </AlertDialogCancel>
             <AlertDialogAction onClick={() => {
-              if (pendingExternalChange) {
-                load(pendingExternalChange)
+              if (closingTabPath) {
+                closeTab(closingTabPath)
+                setClosingTabPath(null)
               }
-              setPendingExternalChange(null)
             }}>
-              刷新
+              直接关闭
+            </AlertDialogAction>
+            <AlertDialogAction onClick={() => {
+              if (closingTabPath) {
+                saveTab(closingTabPath)
+                // Wait a bit for save to complete, then close
+                setTimeout(() => {
+                  closeTab(closingTabPath)
+                  setClosingTabPath(null)
+                }, 500)
+              }
+            }}>
+              保存并关闭
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
