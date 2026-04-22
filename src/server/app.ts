@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { ColonynoteConfig } from '../config.js'
-import { createFileRouter } from './api.js'
+import { createFileRouter, createMutableConfigHolder } from './api.js'
 import { IgnoreMatcher, defaultIgnoreConfig } from './ignore.js'
 
 export function createApp(config: ColonynoteConfig) {
@@ -11,15 +11,17 @@ export function createApp(config: ColonynoteConfig) {
     globalPatterns: config.ignore.patterns,
   })
 
+  const holder = createMutableConfigHolder(config, matcher)
+
   app.use('*', cors())
 
   app.use('*', async (c, next) => {
-    c.set('config', config)
+    c.set('config', holder.config)
     await next()
   })
 
-  const fileRouter = createFileRouter(config, matcher)
+  const fileRouter = createFileRouter(holder)
   app.route('/api/files', fileRouter)
 
-  return { app, matcher }
+  return { app, matcher, holder }
 }

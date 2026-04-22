@@ -6,9 +6,9 @@ import { createServer } from 'http'
 import { serve } from '@hono/node-server'
 import fs from 'fs'
 import path from 'path'
-import { createFileRouter } from './server/api.js'
+import { createFileRouter, createMutableConfigHolder } from './server/api.js'
 import { setupWatcher } from './server/watcher.js'
-import { loadConfig, type DirConfig, type ColonynoteConfig } from './config.js'
+import { loadConfig, getConfigFilePath, type DirConfig, type ColonynoteConfig } from './config.js'
 import { IgnoreMatcher } from './server/ignore.js'
 
 function collect(value: string, previous: string[]) {
@@ -37,7 +37,7 @@ async function main() {
     }
   }
 
-  const config = await loadConfig('development')
+  let config = await loadConfig('development')
 
   if (cliDirs.length > 0) {
     for (const rootPath of cliDirs) {
@@ -51,14 +51,16 @@ async function main() {
     }
   }
 
-  const matcher = new IgnoreMatcher(config.dirs.map(d => d.path), {
+  let matcher = new IgnoreMatcher(config.dirs.map(d => d.path), {
     globalPatterns: config.ignore.patterns,
   })
+
+  const holder = createMutableConfigHolder(config, matcher)
 
   const app = new Hono()
   app.use('*', cors())
 
-  const fileRouter = createFileRouter(config, matcher, 'development')
+  const fileRouter = createFileRouter(holder, 'development')
   app.route('/api/files', fileRouter)
 
   const clients = new Set<WebSocket>()
@@ -89,18 +91,60 @@ async function main() {
     }
   })
 
-  setupWatcher(config, matcher, {
+  function broadcastWsMessage(message: string) {
+    clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message)
+      }
+    })
+  }
+
+  let watcher = setupWatcher(holder.config, holder.matcher, {
     onFileChange: (rootPath: string, event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', filePath: string) => {
-      const actualRootPath = findDirForPath(filePath, config)
+      const actualRootPath = findDirForPath(filePath, holder.config)
       const relativePath = '/' + filePath.replace(actualRootPath, '').replace(/^\/+/, '')
       const message = JSON.stringify({ type: 'file:change', event, path: relativePath, rootPath: actualRootPath })
-      clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(message)
-        }
-      })
+      broadcastWsMessage(message)
     },
   })
+
+  // Config file hot-reload
+  const configFilePath = getConfigFilePath('development')
+  let reloadTimer: NodeJS.Timeout | null = null
+  fs.watch(path.dirname(configFilePath), (eventType, filename) => {
+    if (filename !== path.basename(configFilePath)) return
+    if (reloadTimer) clearTimeout(reloadTimer)
+    reloadTimer = setTimeout(() => {
+      reloadTimer = null
+      reloadConfig()
+    }, 500)
+  })
+
+  function reloadConfig() {
+    loadConfig('development').then((loaded) => {
+      const newMatcher = new IgnoreMatcher(loaded.dirs.map(d => d.path), {
+        globalPatterns: loaded.ignore.patterns,
+      })
+      holder.setConfig(loaded)
+      holder.setMatcher(newMatcher)
+
+      // Restart file watcher
+      watcher.close()
+      watcher = setupWatcher(loaded, newMatcher, {
+        onFileChange: (rootPath: string, event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', filePath: string) => {
+          const actualRootPath = findDirForPath(filePath, holder.config)
+          const relativePath = '/' + filePath.replace(actualRootPath, '').replace(/^\/+/, '')
+          const message = JSON.stringify({ type: 'file:change', event, path: relativePath, rootPath: actualRootPath })
+          broadcastWsMessage(message)
+        },
+      })
+
+      console.log(`[Config] Reloaded from ${configFilePath}`)
+      broadcastWsMessage(JSON.stringify({ type: 'config:reload' }))
+    }).catch((e) => {
+      console.warn('[Config] Failed to reload config:', e)
+    })
+  }
 
   console.log('Backend server running on http://localhost:5788')
 

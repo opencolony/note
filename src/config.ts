@@ -86,6 +86,12 @@ const defaultConfig: ColonynoteConfig = {
   },
 }
 
+export function getConfigFilePath(env: 'development' | 'production' = 'production'): string {
+  const homeDir = os.homedir()
+  const colonynoteDir = path.join(homeDir, '.colonynote')
+  return path.join(colonynoteDir, env === 'development' ? 'config.dev.json' : 'config.json')
+}
+
 export async function loadConfig(env: 'development' | 'production' = 'production'): Promise<ColonynoteConfig> {
   const config = { ...defaultConfig }
   const homeDir = os.homedir()

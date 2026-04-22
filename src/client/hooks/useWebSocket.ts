@@ -48,6 +48,10 @@ function createGlobalWebSocket() {
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data)
+      if (data.type === 'config:reload') {
+        window.dispatchEvent(new CustomEvent('config-changed'))
+        return
+      }
       globalCallbacks.forEach((cb) => cb(data))
     } catch {
       // ignore

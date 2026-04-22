@@ -126,8 +126,29 @@ async function walkDirectory(dir: string, dirPath: string, config: ColonynoteCon
   return nodes
 }
 
-export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatcher, env: 'development' | 'production' = 'production') {
+export interface ConfigHolder {
+  get config(): ColonynoteConfig
+  get matcher(): IgnoreMatcher
+  setConfig(config: ColonynoteConfig): void
+  setMatcher(matcher: IgnoreMatcher): void
+}
+
+export function createMutableConfigHolder(initialConfig: ColonynoteConfig, initialMatcher: IgnoreMatcher): ConfigHolder {
+  let config = initialConfig
+  let matcher = initialMatcher
+  return {
+    get config() { return config },
+    get matcher() { return matcher },
+    setConfig(c: ColonynoteConfig) { config = c },
+    setMatcher(m: IgnoreMatcher) { matcher = m },
+  }
+}
+
+export function createFileRouter(holder: ConfigHolder, env: 'development' | 'production' = 'production') {
   const router = new Hono()
+
+  function getConfig() { return holder.config }
+  function getMatcher() { return holder.matcher }
 
   // Server-side file tree cache to avoid re-walking on every request
   interface CacheEntry {
@@ -139,6 +160,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   const CACHE_TTL_MS = 3000
 
   function computeConfigHash(): string {
+    const config = getConfig()
     return JSON.stringify({
       dirs: config.dirs.map(d => ({ path: d.path, name: d.name })),
       showHiddenFiles: config.showHiddenFiles,
@@ -152,6 +174,8 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   }
 
   async function getFileGroups(): Promise<any[]> {
+    const config = getConfig()
+    const matcher = getMatcher()
     const now = Date.now()
     const hash = computeConfigHash()
     if (treeCache && (now - treeCache.timestamp) < CACHE_TTL_MS && treeCache.configHash === hash) {
@@ -180,6 +204,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   }
 
   router.get('/config', async (c) => {
+    const config = getConfig()
     return c.json({
       showHiddenFiles: config.showHiddenFiles,
       allowedExtensions: config.allowedExtensions,
@@ -188,6 +213,8 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.patch('/config', async (c) => {
+    const config = getConfig()
+    const matcher = getMatcher()
     try {
       const body = await c.req.json()
       const allowedFields = ['showHiddenFiles', 'allowedExtensions', 'ignore']
@@ -224,10 +251,12 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
   // Dir management routes
   router.get('/dirs', async (c) => {
+    const config = getConfig()
     return c.json({ dirs: config.dirs })
   })
 
   router.post('/dirs', async (c) => {
+    const config = getConfig()
     try {
       const body = await c.req.json()
       const newPath = body.path
@@ -256,6 +285,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.delete('/dirs', async (c) => {
+    const config = getConfig()
     const pathParam = c.req.query('path')
     if (!pathParam) return c.json({ error: 'path parameter required' }, 400)
 
@@ -269,6 +299,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.patch('/dirs', async (c) => {
+    const config = getConfig()
     try {
       const body = await c.req.json()
       const { path: dirPath, exclude, name } = body
@@ -324,6 +355,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.get('/dirs/search', async (c) => {
+    const config = getConfig()
     const query = c.req.query('q') || ''
     const rawRoot = c.req.query('root')
     const mode = c.req.query('mode') || 'fuzzy'
@@ -444,6 +476,8 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
   // Lazy-load directory children on demand (performance optimization)
   router.get('/children', async (c) => {
+    const config = getConfig()
+    const matcher = getMatcher()
     const dirPathParam = c.req.query('dirPath')
     const rootParam = c.req.query('root')
     if (!dirPathParam) return c.json({ error: 'dirPath is required' }, 400)
@@ -482,6 +516,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.get('/content', async (c) => {
+    const config = getConfig()
     const pathsParam = c.req.query('paths')
     if (!pathsParam) {
       return c.json({ error: 'paths parameter is required' }, 400)
@@ -530,6 +565,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.get('/search', async (c) => {
+    const config = getConfig()
     const query = c.req.query('q')
     if (!query || !query.trim()) {
       return c.json({ results: [] })
@@ -608,6 +644,8 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.get('/*', async (c) => {
+    const config = getConfig()
+    const matcher = getMatcher()
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
 
     // Handle root path - return grouped file tree
@@ -660,6 +698,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.post('/copy', async (c) => {
+    const config = getConfig()
     try {
       const body = await c.req.json()
       let { sourcePath, targetPath, sourceRoot, targetRoot } = body
@@ -705,6 +744,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.post('/*', async (c) => {
+    const config = getConfig()
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
     const rootParam = c.req.query('root')
     let dirPath: string | null
@@ -775,6 +815,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.put('/*', async (c) => {
+    const config = getConfig()
     try {
       const body = await c.req.json()
       const { oldPath, newPath, isDirectory, sourceRoot, targetRoot } = body
@@ -836,6 +877,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   })
 
   router.delete('/*', async (c) => {
+    const config = getConfig()
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
     const rootParam = c.req.query('root')
     let dirPath: string | null
