@@ -1,4 +1,4 @@
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -15,12 +15,14 @@ import { Highlight } from '@tiptap/extension-highlight'
 import { Underline } from '@tiptap/extension-underline'
 import { Typography } from '@tiptap/extension-typography'
 import { common, createLowlight } from 'lowlight'
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import mermaid from 'mermaid'
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { Maximize2 } from 'lucide-react'
 import { MermaidFullscreenDialog } from './MermaidFullscreenDialog'
 import { EditorToolbar } from './EditorToolbar'
+import { FrontmatterPanel } from './FrontmatterPanel'
+import { extractFrontmatter, parseFrontmatterData, type FrontmatterStorage } from '../extensions/frontmatter'
 
 const isDarkMode = () => document.documentElement.classList.contains('dark')
 
@@ -188,10 +190,49 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
   const isInternalUpdateRef = useRef(false)
   const lastNotifiedValueRef = useRef<string>(value)
   const sourceScrollRef = useRef<number>(0)
+  const frontmatterRef = useRef<string | null>(null)
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
   })
+
+  // Extract frontmatter from value externally, so the editor only sees body content
+  const { frontmatter: rawFrontmatter, body: bodyContent } = extractFrontmatter(value)
+  const [displayFrontmatter, setDisplayFrontmatter] = useState<string | null>(rawFrontmatter)
+  frontmatterRef.current = displayFrontmatter
+  const editorRef = useRef<Editor | null>(null) as React.MutableRefObject<Editor | null>
+
+  // Keep displayFrontmatter in sync when value changes externally
+  useEffect(() => {
+    setDisplayFrontmatter(rawFrontmatter)
+  }, [rawFrontmatter])
+
+  const handleFrontmatterChange = useCallback((newFm: string | null) => {
+    setDisplayFrontmatter(newFm)
+    frontmatterRef.current = newFm
+
+    // Get current body from editor and rebuild full content
+    const ed = editorRef.current
+    if (!ed) return
+    try {
+      const storage = (ed.storage as Record<string, any>).markdown
+      const bodyMarkdown = storage && typeof storage.getMarkdown === 'function'
+        ? storage.getMarkdown()
+        : ed.getText()
+
+      let fullContent = bodyMarkdown
+      if (newFm) {
+        fullContent = `---\n${newFm}\n---\n${bodyMarkdown}`
+      }
+
+      if (fullContent !== lastNotifiedValueRef.current) {
+        lastNotifiedValueRef.current = fullContent
+        onChange(fullContent)
+      }
+    } catch (e) {
+      console.error('Failed to rebuild content with frontmatter:', e)
+    }
+  }, [onChange])
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -236,7 +277,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       Underline,
       Typography,
     ],
-    content: value,
+    content: bodyContent,
     editable: !readOnly && mode === 'wysiwyg',
     onUpdate: ({ editor }) => {
       if (isInternalUpdateRef.current) {
@@ -245,13 +286,20 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       try {
         const storage = editor.storage as Record<string, any>
         const markdownStorage = storage.markdown
-        const newValue = markdownStorage && typeof markdownStorage.getMarkdown === 'function'
+        let bodyMarkdown = markdownStorage && typeof markdownStorage.getMarkdown === 'function'
           ? markdownStorage.getMarkdown()
           : editor.getText()
-        
-        if (newValue !== lastNotifiedValueRef.current) {
-          lastNotifiedValueRef.current = newValue
-          onChange(newValue)
+
+        // Prepend frontmatter if present
+        const fm = frontmatterRef.current
+        let fullContent = bodyMarkdown
+        if (fm) {
+          fullContent = `---\n${fm}\n---\n${bodyMarkdown}`
+        }
+
+        if (fullContent !== lastNotifiedValueRef.current) {
+          lastNotifiedValueRef.current = fullContent
+          onChange(fullContent)
         }
       } catch (e) {
         console.error('Failed to get markdown:', e)
@@ -263,18 +311,20 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       }
     },
   })
+  editorRef.current = editor
 
+  // Re-extract frontmatter when value changes (e.g. external file change, mode switch)
+  // Sync external value changes to editor (body only, not frontmatter)
   useEffect(() => {
     if (!editor) return
+    if (isInternalUpdateRef.current) return
 
-    if (isInternalUpdateRef.current) {
-      return
-    }
+    const { frontmatter: fm, body } = extractFrontmatter(value)
+    frontmatterRef.current = fm
 
     let editorMarkdown = ''
     try {
-      const storage = editor.storage as Record<string, any>
-      const markdownStorage = storage.markdown
+      const markdownStorage = (editor.storage as Record<string, any>).markdown
       editorMarkdown = markdownStorage && typeof markdownStorage.getMarkdown === 'function'
         ? markdownStorage.getMarkdown()
         : editor.getText()
@@ -282,7 +332,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       editorMarkdown = editor.getText()
     }
 
-    if (editorMarkdown === value) {
+    if (editorMarkdown === body) {
       lastNotifiedValueRef.current = value
       return
     }
@@ -290,7 +340,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     const { from, to } = editor.state.selection
 
     isInternalUpdateRef.current = true
-    editor.commands.setContent(value)
+    editor.commands.setContent(body)
     lastNotifiedValueRef.current = value
 
     requestAnimationFrame(() => {
@@ -413,9 +463,14 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
   }
 
   return (
-    <div className="tiptap-editor-wrapper">
-      {mode === 'wysiwyg' && !isMobile && <EditorToolbar editor={editor} variant="desktop" />}
-      <EditorContent editor={editor} className="tiptap-editor" />
+    <div className="tiptap-editor-root">
+      <div className="tiptap-editor-toolbar-area">
+        {mode === 'wysiwyg' && !isMobile && <EditorToolbar editor={editor} variant="desktop" />}
+      </div>
+      <div className="tiptap-editor-scroll-area">
+        <FrontmatterPanel rawFrontmatter={displayFrontmatter} onFrontmatterChange={handleFrontmatterChange} />
+        <EditorContent editor={editor} className="tiptap-editor-content" />
+      </div>
       {isMobile && mode === 'wysiwyg' && <EditorToolbar editor={editor} variant="mobile" />}
     </div>
   )

@@ -246,22 +246,34 @@
 }
 
 /* TipTap Editor Styles */
-.tiptap-editor-wrapper {
+.tiptap-editor-root {
   @apply w-full h-full;
   background-color: var(--color-background);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
-.tiptap-editor {
+.tiptap-editor-toolbar-area {
+  flex-shrink: 0;
+}
+
+.tiptap-editor-scroll-area {
   @apply w-full flex-1 overflow-y-auto;
   background-color: var(--color-background);
 }
 
-.tiptap-editor .tiptap {
-  @apply w-full flex-1 p-4 md:p-8 prose prose-slate dark:prose-invert max-w-none;
+.tiptap-editor,
+.tiptap-editor-content {
+  @apply w-full;
+  background-color: var(--color-background);
+}
+
+.tiptap-editor .tiptap,
+.tiptap-editor-content .tiptap {
+  @apply w-full p-4 md:p-8 prose prose-slate dark:prose-invert max-w-none;
   outline: none;
-  min-height: 100%;
+  min-height: auto;
 }
 
 .tiptap-editor .tiptap-focused {
@@ -1267,4 +1279,75 @@
   .tiptap-editor .tiptap {
     padding-bottom: 4rem;
   }
+}
+
+/* Frontmatter Panel Styles */
+.frontmatter-panel {
+  @apply border-b border-border bg-muted/50;
+  padding: 10px 16px;
+}
+
+.frontmatter-panel-header {
+  @apply text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2;
+}
+
+.frontmatter-fields {
+  @apply flex flex-col gap-1.5;
+}
+
+.frontmatter-field {
+  @apply flex items-center gap-2;
+}
+
+.frontmatter-key-input {
+  @apply text-sm font-mono font-semibold bg-transparent border-0 outline-none;
+  width: 80px;
+  color: var(--color-foreground);
+  flex-shrink: 0;
+}
+
+.frontmatter-key-input::placeholder {
+  color: var(--color-muted-foreground);
+  font-weight: 400;
+}
+
+.frontmatter-separator {
+  @apply text-muted-foreground font-mono;
+  flex-shrink: 0;
+}
+
+.frontmatter-value-input {
+  @apply text-sm bg-transparent border-0 outline-none flex-1;
+  color: var(--color-foreground);
+}
+
+.frontmatter-value-input::placeholder {
+  color: var(--color-muted-foreground);
+}
+
+.frontmatter-remove-btn {
+  @apply flex items-center justify-center size-6 min-h-6 min-w-6 rounded-md;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-muted-foreground);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.frontmatter-remove-btn:hover {
+  @apply bg-destructive/10 text-destructive;
+}
+
+.frontmatter-add-btn {
+  @apply flex items-center gap-1 text-xs mt-2;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-muted-foreground);
+  transition: color 0.15s ease;
+}
+
+.frontmatter-add-btn:hover {
+  @apply text-foreground;
 }
