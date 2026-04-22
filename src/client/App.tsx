@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
-import { Plus, Code, Eye, List, FileText, Folder, FolderOpen, Search, X, Settings, GripVertical, AlertCircle } from 'lucide-react'
+import { Plus, Code, Eye, List, FileText, Folder, FolderOpen, Search, X, Settings, GripVertical, AlertCircle, Sun, Moon, Monitor } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { FileTree } from './components/FileTree'
@@ -63,6 +63,8 @@ interface SidebarContentProps {
   onDirChange?: (dirPath: string) => void
   onAddDir?: () => void
   onEditDir?: () => void
+  onToggleTheme?: () => void
+  themeMode?: 'light' | 'dark' | 'system'
 }
 
 const SidebarContent = memo(function SidebarContent({
@@ -87,6 +89,8 @@ const SidebarContent = memo(function SidebarContent({
   onDirChange,
   onAddDir,
   onEditDir,
+  onToggleTheme,
+  themeMode,
 }: SidebarContentProps) {
   // 获取当前活动组的文件列表
   const activeGroup = groups.find(g => g.root.path === activeRoot)
@@ -100,6 +104,11 @@ const SidebarContent = memo(function SidebarContent({
           <span className="font-semibold text-sm">ColonyNote</span>
         </div>
         <div className="flex gap-1">
+          {onToggleTheme && (
+            <Button variant="ghost" size="icon" onClick={onToggleTheme} title={themeMode === 'light' ? '切换到深色主题' : themeMode === 'dark' ? '切换到跟随系统' : '切换到浅色主题'}>
+              {themeMode === 'dark' ? <Sun className="size-4" /> : themeMode === 'system' ? <Monitor className="size-4" /> : <Moon className="size-4" />}
+            </Button>
+          )}
           {onClose && (
             <Button variant="ghost" size="icon" onClick={onClose} title="关闭" className="md:hidden">
               <X className="size-4" />
@@ -208,6 +217,11 @@ function App() {
   const [addDirDialogOpen, setAddDirDialogOpen] = useState(false)
   const [editDirDialogOpen, setEditDirDialogOpen] = useState(false)
   const [editDirPath, setEditDirPath] = useState<string | null>(null)
+  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>(() => {
+    const saved = localStorage.getItem('colonynote-theme')
+    if (saved === 'light' || saved === 'dark' || saved === 'system') return saved
+    return 'system'
+  })
 
   const [isSaving, setIsSaving] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -218,6 +232,7 @@ function App() {
   const isResizingRef = useRef(false)
   const fetchingRef = useRef(false)
   const loadingRef = useRef<string | null>(null)
+  const scrollPositionRef = useRef<number>(0)
   // 用于跟踪自己发起的保存会话，避免在网络差时误判为外部修改
   // key: 文件路径, value: 保存会话ID集合
   const pendingSaveSessionsRef = useRef<Map<string, Set<string>>>(new Map())
@@ -281,6 +296,43 @@ function App() {
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  // 同步主题状态
+  useEffect(() => {
+    const applyTheme = (mode: 'light' | 'dark' | 'system') => {
+      const shouldBeDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      if (shouldBeDark) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+      localStorage.setItem('colonynote-theme', mode)
+    }
+
+    applyTheme(themeMode)
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleSystemChange = () => {
+      if (themeMode === 'system') {
+        applyTheme('system')
+        window.dispatchEvent(new CustomEvent('theme-change'))
+      }
+    }
+    mediaQuery.addEventListener('change', handleSystemChange)
+
+    const handleThemeChange = () => {
+      const saved = localStorage.getItem('colonynote-theme')
+      if (saved === 'light' || saved === 'dark' || saved === 'system') {
+        setThemeMode(saved)
+      }
+    }
+    window.addEventListener('theme-change', handleThemeChange)
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleSystemChange)
+      window.removeEventListener('theme-change', handleThemeChange)
+    }
+  }, [themeMode])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -664,7 +716,21 @@ function App() {
   }, [save, content, path, activeDir])
 
   const handleToggleEditorMode = useCallback(() => {
-    setEditorMode(prev => prev === 'wysiwyg' ? 'source' : 'wysiwyg')
+    setEditorMode(prev => {
+      // 保存当前滚动位置
+      const editorContainer = document.querySelector('.tiptap-editor, .editor-textarea')
+      if (editorContainer) {
+        scrollPositionRef.current = editorContainer.scrollTop || 0
+      }
+      return prev === 'wysiwyg' ? 'source' : 'wysiwyg'
+    })
+  }, [])
+
+  const handleToggleTheme = useCallback(() => {
+    setThemeMode(prev => {
+      const next = prev === 'light' ? 'dark' : prev === 'dark' ? 'system' : 'light'
+      return next
+    })
   }, [])
 
   const handleDirChange = useCallback((newDir: string) => {
@@ -779,6 +845,8 @@ function App() {
                 onDirChange={handleDirChange}
                 onAddDir={() => setAddDirDialogOpen(true)}
                 onEditDir={() => { setEditDirPath(activeDir); setEditDirDialogOpen(true) }}
+                onToggleTheme={handleToggleTheme}
+                themeMode={themeMode}
               />
             </aside>
           </>
@@ -817,6 +885,8 @@ function App() {
               onDirChange={handleDirChange}
               onAddDir={() => setAddDirDialogOpen(true)}
               onEditDir={() => { setEditDirPath(activeDir); setEditDirDialogOpen(true) }}
+              onToggleTheme={handleToggleTheme}
+              themeMode={themeMode}
             />
             </aside>
             <div
@@ -874,11 +944,12 @@ function App() {
                 )}
                 <div className="flex-1 overflow-hidden">
                   <TipTapEditor
-                    key={`${path}-${editorMode}`}
+                    key={path}
                     value={content}
                     onChange={updateContent}
                     mode={editorMode}
                     path={path}
+                    scrollPosition={scrollPositionRef.current}
                     onLinkClick={(linkPath) => handleSelectFile(linkPath, 'file')}
                   />
                 </div>

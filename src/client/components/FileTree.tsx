@@ -53,7 +53,7 @@ interface FileTreeProps {
   onEditDir?: () => void
 }
 
-function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, currentDir, activeRoot }: {
+const TreeNode = memo(function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, currentDir, activeRoot }: {
   node: FileNode
   activePath: string | null
   expandedPaths: Set<string>
@@ -246,9 +246,9 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
       </Collapsible>
     </SidebarMenuItem>
   )
-}
+})
 
-const EmptyState = ({ activeRoot }: { activeRoot: string | null }) => {
+const EmptyState = memo(({ activeRoot }: { activeRoot: string | null }) => {
   const rootName = activeRoot?.split('/').pop() || '根目录'
   return (
     <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm text-center p-6">
@@ -259,7 +259,7 @@ const EmptyState = ({ activeRoot }: { activeRoot: string | null }) => {
       </p>
     </div>
   )
-}
+})
 
 export const FileTree = memo(function FileTree({ files, activePath, activeRoot, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, onEditDir }: FileTreeProps) {
   const [editName, setEditName] = useState('')

@@ -39,6 +39,7 @@ interface TipTapEditorProps {
   placeholder?: string
   readOnly?: boolean
   path?: string | null
+  scrollPosition?: number
   onLinkClick?: (path: string) => void
 }
 
@@ -183,9 +184,10 @@ const CustomCodeBlock = CodeBlockLowlight.extend({
   },
 }).configure({ lowlight })
 
-export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, path, onLinkClick }: TipTapEditorProps) {
+export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, path, scrollPosition, onLinkClick }: TipTapEditorProps) {
   const isInternalUpdateRef = useRef(false)
   const lastNotifiedValueRef = useRef<string>(value)
+  const sourceScrollRef = useRef<number>(0)
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
@@ -365,6 +367,37 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     document.addEventListener('click', handleClick, true)
     return () => document.removeEventListener('click', handleClick, true)
   }, [path, onLinkClick])
+
+  // 恢复切换模式时的滚动位置
+  useEffect(() => {
+    if (mode === 'source') {
+      const textarea = document.querySelector('.editor-textarea')
+      if (textarea) {
+        const pos = sourceScrollRef.current || scrollPosition || 0
+        if (pos > 0) {
+          requestAnimationFrame(() => {
+            textarea.scrollTop = pos
+          })
+        }
+      }
+    } else if (mode === 'wysiwyg') {
+      // 切换到 wysiwyg 时保存 textarea 的滚动位置
+      const textarea = document.querySelector('.editor-textarea')
+      if (textarea) {
+        sourceScrollRef.current = textarea.scrollTop
+      }
+      // 恢复滚动位置到编辑器
+      const pos = sourceScrollRef.current || scrollPosition || 0
+      if (pos > 0) {
+        const editorContainer = document.querySelector('.tiptap-editor')
+        if (editorContainer) {
+          requestAnimationFrame(() => {
+            editorContainer.scrollTop = pos
+          })
+        }
+      }
+    }
+  }, [mode, scrollPosition])
 
   if (mode === 'source') {
     return (

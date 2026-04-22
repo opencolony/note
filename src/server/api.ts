@@ -129,6 +129,56 @@ async function walkDirectory(dir: string, dirPath: string, config: ColonynoteCon
 export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatcher) {
   const router = new Hono()
 
+  // Server-side file tree cache to avoid re-walking on every request
+  interface CacheEntry {
+    groups: any[]
+    timestamp: number
+    configHash: string
+  }
+  let treeCache: CacheEntry | null = null
+  const CACHE_TTL_MS = 3000
+
+  function computeConfigHash(): string {
+    return JSON.stringify({
+      dirs: config.dirs.map(d => ({ path: d.path, name: d.name })),
+      showHiddenFiles: config.showHiddenFiles,
+      allowedExtensions: config.allowedExtensions,
+      ignore: config.ignore,
+    })
+  }
+
+  function invalidateTreeCache() {
+    treeCache = null
+  }
+
+  async function getFileGroups(): Promise<any[]> {
+    const now = Date.now()
+    const hash = computeConfigHash()
+    if (treeCache && (now - treeCache.timestamp) < CACHE_TTL_MS && treeCache.configHash === hash) {
+      return treeCache.groups
+    }
+
+    const groups = await Promise.all(
+      config.dirs.map(async (dir) => {
+        try {
+          return {
+            root: dir,
+            files: await walkDirectory(dir.path, dir.path, config, matcher)
+          }
+        } catch (e) {
+          return {
+            root: dir,
+            files: [],
+            error: e instanceof Error ? e.message : 'Failed to read directory'
+          }
+        }
+      })
+    )
+
+    treeCache = { groups, timestamp: now, configHash: hash }
+    return groups
+  }
+
   router.get('/config', async (c) => {
     return c.json({
       showHiddenFiles: config.showHiddenFiles,
@@ -150,6 +200,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
       }
 
       saveConfig(config)
+      invalidateTreeCache()
 
       if (typeof updates.showHiddenFiles === 'boolean') {
         config.showHiddenFiles = updates.showHiddenFiles
@@ -197,6 +248,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
       const newDir: DirConfig = { path: path.resolve(newPath), exclude: body.exclude, name: body.name }
       config.dirs.push(newDir)
       saveConfig(config)
+      invalidateTreeCache()
       return c.json({ success: true, dir: newDir })
     } catch (e) {
       return c.json({ error: 'Failed to add dir' }, 500)
@@ -212,6 +264,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
     config.dirs.splice(idx, 1)
     saveConfig(config)
+    invalidateTreeCache()
     return c.json({ success: true })
   })
 
@@ -227,6 +280,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
       if (exclude !== undefined) dir.exclude = exclude
       if (name !== undefined) dir.name = name
       saveConfig(config)
+      invalidateTreeCache()
       return c.json({ success: true, dir })
     } catch (e) {
       return c.json({ error: 'Failed to update dir' }, 500)
@@ -388,24 +442,39 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     return c.json({ matches })
   })
 
+  // Lazy-load directory children on demand (performance optimization)
+  router.get('/children', async (c) => {
+    const dirPathParam = c.req.query('dirPath')
+    const rootParam = c.req.query('root')
+    if (!dirPathParam) return c.json({ error: 'dirPath is required' }, 400)
+
+    let dirPath: string | null
+    if (rootParam) {
+      dirPath = validateRoot(rootParam, config)
+      if (!dirPath) return c.json({ error: 'Invalid root' }, 400)
+    } else {
+      dirPath = findRootForPath(dirPathParam, config)
+      if (!dirPath) return c.json({ error: 'Access denied' }, 403)
+    }
+
+    const relativePath = dirPathParam.startsWith('/') ? dirPathParam.slice(1) : dirPathParam
+    const fullPath = path.join(dirPath, relativePath)
+
+    if (!isAllowed(fullPath, config)) return c.json({ error: 'Access denied' }, 403)
+
+    try {
+      const stat = await fs.stat(fullPath)
+      if (!stat.isDirectory()) return c.json({ error: 'Not a directory' }, 400)
+      const children = await walkDirectory(fullPath, dirPath, config, matcher)
+      return c.json({ children })
+    } catch (e) {
+      return c.json({ error: 'Failed to read directory' }, 500)
+    }
+  })
+
   router.get('/', async (c) => {
     try {
-      const groups = await Promise.all(
-        config.dirs.map(async (dir) => {
-          try {
-            return {
-              root: dir,
-              files: await walkDirectory(dir.path, dir.path, config, matcher)
-            }
-          } catch (e) {
-            return {
-              root: dir,
-              files: [],
-              error: e instanceof Error ? e.message : 'Failed to read directory'
-            }
-          }
-        })
-      )
+      const groups = await getFileGroups()
       return c.json({ groups })
     } catch (e) {
       return c.json({ error: 'Failed to read directory' }, 500)
@@ -544,22 +613,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     // Handle root path - return grouped file tree
     if (filePath === '/' || filePath === '') {
       try {
-        const groups = await Promise.all(
-          config.dirs.map(async (dir) => {
-            try {
-              return {
-                root: dir,
-                files: await walkDirectory(dir.path, dir.path, config, matcher)
-              }
-            } catch (e) {
-              return {
-                root: dir,
-                files: [],
-                error: e instanceof Error ? e.message : 'Failed to read directory'
-              }
-            }
-          })
-        )
+        const groups = await getFileGroups()
         return c.json({ groups })
       } catch (e) {
         return c.json({ error: 'Failed to read directory' }, 500)
