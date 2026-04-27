@@ -248,15 +248,42 @@ const TreeNode = memo(function TreeNode({ node, activePath, expandedPaths, setEx
   )
 })
 
-const EmptyState = memo(({ activeRoot }: { activeRoot: string | null }) => {
+const EmptyState = memo(({ activeRoot, onCreateRequest, onEditDir }: {
+  activeRoot: string | null
+  onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
+  onEditDir?: () => void
+}) => {
   const rootName = activeRoot?.split('/').pop() || '根目录'
   return (
     <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm text-center p-6">
       <Folder className="size-12 mb-4 opacity-50" />
       <div className="mb-2">根目录「{rootName}」暂无文件</div>
-      <p className="text-xs">
-        点击上方「新建文件」按钮创建第一个文件
-      </p>
+      <div className="flex gap-1 mt-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onCreateRequest?.(false, '')}
+        >
+          <FileText className="size-4 mr-1" />
+          新建文件
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onCreateRequest?.(true, '')}
+        >
+          <Folder className="size-4 mr-1" />
+          新建文件夹
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onEditDir?.()}
+        >
+          <Pencil className="size-4 mr-1" />
+          目录设置
+        </Button>
+      </div>
     </div>
   )
 })
@@ -308,7 +335,7 @@ export const FileTree = memo(function FileTree({ files, activePath, activeRoot, 
   if (files.length === 0 && !editingType) {
     return (
       <div className="flex-1 overflow-y-auto">
-        <EmptyState activeRoot={activeRoot} />
+        <EmptyState activeRoot={activeRoot} onCreateRequest={onCreateRequest} onEditDir={onEditDir} />
       </div>
     )
   }
