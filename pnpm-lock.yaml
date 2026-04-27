@@ -11,21 +11,6 @@ importers:
       '@hono/node-server':
         specifier: ^1.19.11
         version: 1.19.13(hono@4.12.12)
-      '@milkdown/crepe':
-        specifier: ^7.19.2
-        version: 7.20.0(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.8)(typescript@5.9.3)
-      '@milkdown/plugin-listener':
-        specifier: ^7.19.2
-        version: 7.20.0
-      '@milkdown/prose':
-        specifier: ^7.19.2
-        version: 7.20.0
-      '@milkdown/react':
-        specifier: ^7.19.2
-        version: 7.20.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
-      '@milkdown/utils':
-        specifier: ^7.19.2
-        version: 7.20.0
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -131,9 +116,6 @@ importers:
       js-yaml:
         specifier: ^4.1.1
         version: 4.1.1
-      katex:
-        specifier: ^0.16.40
-        version: 0.16.45
       lowlight:
         specifier: ^3.3.0
         version: 3.3.0
