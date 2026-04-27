@@ -452,11 +452,31 @@
 }
 
 .mermaid-fullscreen-btn {
-  @apply ml-auto p-1.5 rounded-md hover:bg-accent cursor-pointer transition-colors;
+  @apply p-1.5 rounded-md hover:bg-accent cursor-pointer transition-colors;
 }
 
 .mermaid-fullscreen-btn:active {
   transform: scale(0.95);
+}
+
+.code-block-copy-btn {
+  @apply p-1.5 rounded-md hover:bg-accent cursor-pointer transition-colors;
+  opacity: 1;
+  transition: opacity 0.15s;
+}
+
+.code-block-copy-btn:active {
+  transform: scale(0.95);
+}
+
+@media (min-width: 768px) {
+  .code-block-wrapper:hover .code-block-copy-btn {
+    opacity: 1;
+  }
+
+  .code-block-copy-btn {
+    opacity: 0;
+  }
 }
 
 .mermaid-loading {

@@ -18,7 +18,7 @@ import { common, createLowlight } from 'lowlight'
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import mermaid from 'mermaid'
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
-import { Maximize2 } from 'lucide-react'
+import { Maximize2, Copy, Check } from 'lucide-react'
 import { MermaidFullscreenDialog } from './MermaidFullscreenDialog'
 import { EditorToolbar } from './EditorToolbar'
 import { FrontmatterPanel } from './FrontmatterPanel'
@@ -51,6 +51,27 @@ function MermaidCodeBlock({ node, updateAttributes, selected, editor, getPos }: 
   const [error, setError] = useState<string>('')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [themeKey, setThemeKey] = useState(0)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = useCallback(async () => {
+    const text = node.textContent
+    if (!text) return
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }, [node.textContent])
   
   const mermaidId = useMemo(() => `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, [themeKey])
   const mermaidSource = node.textContent
@@ -131,16 +152,26 @@ function MermaidCodeBlock({ node, updateAttributes, selected, editor, getPos }: 
           <option value="markdown">Markdown</option>
           <option value="bash">Bash</option>
         </select>
-        {isMermaid && (
+        <div className="flex items-center gap-1">
           <button
-            className="mermaid-fullscreen-btn"
+            className="code-block-copy-btn"
             contentEditable={false}
-            onClick={() => setIsFullscreen(true)}
-            title="全屏预览"
+            onClick={handleCopy}
+            title={copied ? '已复制' : '复制代码'}
           >
-            <Maximize2 className="size-4" />
+            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
           </button>
-        )}
+          {isMermaid && (
+            <button
+              className="mermaid-fullscreen-btn"
+              contentEditable={false}
+              onClick={() => setIsFullscreen(true)}
+              title="全屏预览"
+            >
+              <Maximize2 className="size-4" />
+            </button>
+          )}
+        </div>
       </div>
       {isMermaid ? (
         <div className="mermaid-preview" contentEditable={false}>
