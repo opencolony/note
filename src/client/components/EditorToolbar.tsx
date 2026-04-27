@@ -5,6 +5,7 @@ import {
   ChevronDown,
   List,
   ListOrdered,
+  ListTodo,
   Quote,
   Code,
   Copy,
@@ -131,6 +132,12 @@ const toolbarButtons: ToolbarButtonConfig[] = [
     label: '有序列表',
     isActive: (editor) => editor.isActive('orderedList'),
     action: (editor) => editor.chain().focus().toggleOrderedList().run(),
+  },
+  {
+    icon: ListTodo,
+    label: '任务列表',
+    isActive: (editor) => editor.isActive('taskList'),
+    action: (editor) => editor.chain().focus().toggleTaskList().run(),
   },
   {
     icon: Quote,
