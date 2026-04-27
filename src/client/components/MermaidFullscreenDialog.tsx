@@ -46,6 +46,7 @@ export function MermaidFullscreenDialog({ source, open, onOpenChange, onSourceCh
   const [svgContent, setSvgContent] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [themeKey, setThemeKey] = useState(0)
 
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
@@ -63,6 +64,14 @@ export function MermaidFullscreenDialog({ source, open, onOpenChange, onSourceCh
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // 取消正在进行的防抖渲染，重置 isLoading
+  useEffect(() => {
+    const handleThemeChange = () => {
+      setThemeKey(prev => prev + 1)
+    }
+    window.addEventListener('theme-change', handleThemeChange)
+    return () => window.removeEventListener('theme-change', handleThemeChange)
+  }, [])
+
   const cancelTimeout = useCallback(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current)
@@ -84,7 +93,7 @@ export function MermaidFullscreenDialog({ source, open, onOpenChange, onSourceCh
     mermaid.render(mermaidIdRef.current, source)
       .then(({ svg }) => { setSvgContent(svg); setIsLoading(false) })
       .catch((err: any) => { setError(err.message || 'Mermaid render error'); setIsLoading(false) })
-  }, [open])
+  }, [open, themeKey])
 
   // 源码模式下停止输入后自动重新渲染
   useEffect(() => {
@@ -99,7 +108,7 @@ export function MermaidFullscreenDialog({ source, open, onOpenChange, onSourceCh
         .catch((err: any) => { setError(err.message || 'Mermaid render error'); setIsLoading(false) })
     }, 800)
     return () => cancelTimeout()
-  }, [isSourceMode, source, cancelTimeout])
+  }, [isSourceMode, source, cancelTimeout, themeKey])
 
   const getDistance = (touches: React.TouchList) => {
     const dx = touches[0].clientX - touches[1].clientX

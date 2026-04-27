@@ -264,10 +264,14 @@ function App() {
   useEffect(() => {
     const applyTheme = (mode: 'light' | 'dark' | 'system') => {
       const shouldBeDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-      if (shouldBeDark) {
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.classList.remove('dark')
+      const isCurrentlyDark = document.documentElement.classList.contains('dark')
+      if (shouldBeDark !== isCurrentlyDark) {
+        if (shouldBeDark) {
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+        }
+        window.dispatchEvent(new CustomEvent('theme-change'))
       }
       localStorage.setItem('colonynote-theme', mode)
     }
@@ -278,7 +282,6 @@ function App() {
     const handleSystemChange = () => {
       if (themeMode === 'system') {
         applyTheme('system')
-        window.dispatchEvent(new CustomEvent('theme-change'))
       }
     }
     mediaQuery.addEventListener('change', handleSystemChange)

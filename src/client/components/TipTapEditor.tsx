@@ -52,7 +52,7 @@ function MermaidCodeBlock({ node, updateAttributes, selected, editor, getPos }: 
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [themeKey, setThemeKey] = useState(0)
   
-  const mermaidId = useMemo(() => `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, [])
+  const mermaidId = useMemo(() => `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, [themeKey])
   const mermaidSource = node.textContent
 
   useEffect(() => {
