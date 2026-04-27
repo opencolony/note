@@ -5,10 +5,10 @@ import { cn } from '../lib/utils'
 
 interface TabBarProps {
   tabOrder: string[]
-  tabs: Map<string, { path: string; content: string; lastSavedContent: string; rootPath: string | null; status?: string }>
-  activeTabPath: string | null
-  onActivate: (path: string, rootPath: string | null) => void
-  onCloseRequest: (path: string) => void
+  tabs: Map<string, { key: string; path: string; content: string; lastSavedContent: string; rootPath: string | null; status?: string }>
+  activeTabKey: string | null
+  onActivate: (key: string) => void
+  onCloseRequest: (key: string) => void
   isMobile: boolean
   rightContent?: ReactNode
 }
@@ -16,7 +16,7 @@ interface TabBarProps {
 export const TabBar = memo(function TabBar({
   tabOrder,
   tabs,
-  activeTabPath,
+  activeTabKey,
   onActivate,
   onCloseRequest,
   isMobile,
@@ -28,23 +28,23 @@ export const TabBar = memo(function TabBar({
     <div className="flex items-center bg-muted/20 border-b border-border shrink-0">
       {/* Scrollable tabs */}
       <div className="flex items-center gap-0 overflow-x-auto overflow-y-hidden flex-1" style={{ WebkitOverflowScrolling: 'touch' }}>
-        {tabOrder.map(path => {
-          const tab = tabs.get(path)
+        {tabOrder.map(key => {
+          const tab = tabs.get(key)
           if (!tab) return null
-          const fileName = path.split('/').pop() || path
-          const isActive = path === activeTabPath
+          const fileName = tab.path.split('/').pop() || tab.path
+          const isActive = key === activeTabKey
           const isDirty = tab.content !== tab.lastSavedContent
 
           return (
             <div
-              key={path}
+              key={key}
               className={cn(
                 'group flex items-center gap-1 h-9 px-3 text-xs cursor-pointer border-r border-border min-w-[100px] max-w-[200px] shrink-0 select-none transition-colors',
                 isActive
                   ? 'bg-background text-foreground'
                   : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
               )}
-              onClick={() => onActivate(path, tab.rootPath)}
+              onClick={() => onActivate(key)}
             >
               {isDirty && (
                 <span className="size-1.5 rounded-full bg-primary shrink-0" />
@@ -60,7 +60,7 @@ export const TabBar = memo(function TabBar({
                 )}
                 onClick={(e) => {
                   e.stopPropagation()
-                  onCloseRequest(path)
+                  onCloseRequest(key)
                 }}
                 title="关闭标签"
               >

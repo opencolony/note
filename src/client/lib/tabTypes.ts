@@ -1,4 +1,5 @@
 export interface OpenTab {
+  key: string
   path: string
   rootPath: string | null
   content: string

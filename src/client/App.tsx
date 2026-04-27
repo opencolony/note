@@ -312,8 +312,9 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!activeTabPath) return
-    const parts = activeTabPath.split('/').filter(Boolean)
+    const tab = getActiveTab()
+    if (!tab) return
+    const parts = tab.path.split('/').filter(Boolean)
     const dirs: string[] = []
     for (let i = 0; i < parts.length - 1; i++) {
       dirs.push('/' + parts.slice(0, i + 1).join('/'))
@@ -325,7 +326,7 @@ function App() {
         return next
       })
     }
-  }, [activeTabPath])
+  }, [activeTabPath, getActiveTab])
 
   const fetchFiles = useCallback(async () => {
     if (fetchingRef.current) return
@@ -529,14 +530,17 @@ function App() {
         ? `/api/files${filePath}?root=${encodeURIComponent(activeDir)}`
         : `/api/files${filePath}`
       await fetch(url, { method: 'DELETE' })
-      if (tabOrder.includes(filePath)) {
-        closeTab(filePath)
+      // Close any open tabs for this file path (across all roots)
+      for (const [key, tab] of tabs) {
+        if (tab.path === filePath) {
+          closeTab(key)
+        }
       }
       fetchFiles()
     } catch (e) {
       console.error('Failed to delete:', e)
     }
-  }, [fetchFiles, tabOrder, closeTab, activeDir])
+  }, [fetchFiles, tabs, closeTab, activeDir])
 
   const handleRename = useCallback(async (filePath: string, newName: string) => {
     try {
@@ -560,10 +564,15 @@ function App() {
       })
 
       // If the renamed file is open, close old tab and open new one
-      if (tabOrder.includes(filePath)) {
-        const activeTab = getActiveTab()
-        const wasActive = activeTabPath === filePath
-        closeTab(filePath)
+      const tabKeyToRename = (() => {
+        for (const [key, tab] of tabs) {
+          if (tab.path === filePath && tab.rootPath === activeDir) return key
+        }
+        return null
+      })()
+      if (tabKeyToRename) {
+        const wasActive = activeTabPath === tabKeyToRename
+        closeTab(tabKeyToRename)
         if (wasActive) {
           openTab(newPath, activeDir)
         }
@@ -572,7 +581,7 @@ function App() {
     } catch (e) {
       console.error('Failed to rename:', e)
     }
-  }, [tabOrder, getActiveTab, activeTabPath, closeTab, openTab, fetchFiles, activeDir])
+  }, [tabs, activeTabPath, closeTab, openTab, fetchFiles, activeDir])
 
   const handleMove = useCallback(async (oldPath: string, newPath: string, sourceRoot: string, targetRoot: string) => {
     try {
@@ -593,10 +602,15 @@ function App() {
       })
 
       // If the moved file is open, close old tab and open new one
-      if (tabOrder.includes(oldPath)) {
-        const activeTab = getActiveTab()
-        const wasActive = activeTabPath === oldPath
-        closeTab(oldPath)
+      const tabKeyToMove = (() => {
+        for (const [key, tab] of tabs) {
+          if (tab.path === oldPath && tab.rootPath === sourceRoot) return key
+        }
+        return null
+      })()
+      if (tabKeyToMove) {
+        const wasActive = activeTabPath === tabKeyToMove
+        closeTab(tabKeyToMove)
         if (wasActive) {
           openTab(newPath, targetRoot)
         }
@@ -605,7 +619,7 @@ function App() {
     } catch (e) {
       console.error('Failed to move:', e)
     }
-  }, [tabOrder, getActiveTab, activeTabPath, closeTab, openTab, fetchFiles])
+  }, [tabs, activeTabPath, closeTab, openTab, fetchFiles])
 
   const handleCopy = useCallback(async (sourcePath: string, targetPath: string, sourceRoot: string, targetRoot: string) => {
     try {
@@ -768,7 +782,7 @@ function App() {
             >
               <SidebarContent
                 groups={fileGroups}
-                activePath={activeTabPath}
+                activePath={activeTab?.path || null}
                 activeRoot={activeDir}
                 currentDir={currentDir}
                 expandedPaths={expandedPaths}
@@ -809,7 +823,7 @@ function App() {
             <aside style={{ width: sidebarWidth }} className="flex flex-col border-r border-border bg-sidebar">
               <SidebarContent
                 groups={fileGroups}
-                activePath={activeTabPath}
+                activePath={activeTab?.path || null}
                 activeRoot={activeDir}
                 currentDir={currentDir}
                 expandedPaths={expandedPaths}
@@ -857,14 +871,17 @@ function App() {
             <TabBar
               tabOrder={tabOrder}
               tabs={tabs}
-              activeTabPath={activeTabPath}
-              onActivate={(p, rp) => openTab(p, rp)}
-              onCloseRequest={(p) => {
-                const dirty = isTabDirty(p)
+              activeTabKey={activeTabPath}
+              onActivate={(key) => {
+                const tab = tabs.get(key)
+                if (tab) openTab(tab.path, tab.rootPath)
+              }}
+              onCloseRequest={(key) => {
+                const dirty = isTabDirty(key)
                 if (dirty) {
-                  setClosingTabPath(p)
+                  setClosingTabPath(key)
                 } else {
-                  closeTab(p)
+                  closeTab(key)
                 }
               }}
               isMobile={isMobile}
@@ -911,9 +928,9 @@ function App() {
                 )}
                 <div className="flex-1 overflow-hidden">
                   <TipTapEditor
-                    key={activeTab.path}
+                    key={activeTab.key}
                     value={activeTab.content}
-                    onChange={(val) => updateTabContent(activeTab.path, val)}
+                    onChange={(val) => updateTabContent(activeTab.key, val)}
                     mode={editorMode}
                     path={activeTab.path}
                     scrollPosition={scrollPositionRef.current}
