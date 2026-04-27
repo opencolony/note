@@ -463,7 +463,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
   }
 
   return (
-    <div className="tiptap-editor-root">
+    <div className="tiptap-editor-root tiptap-editor">
       <div className="tiptap-editor-toolbar-area">
         {mode === 'wysiwyg' && !isMobile && <EditorToolbar editor={editor} variant="desktop" />}
       </div>
