@@ -869,9 +869,9 @@ function App() {
                 <>
                   <span className={cn(
                     "px-2 py-0.5 rounded",
-                    activeTab?.status === 'saving' && "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
-                    activeTab?.status === 'saved' && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950",
-                    activeTab?.status === 'error' && "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950"
+                    activeTab?.status === 'saving' && "text-muted-foreground bg-muted",
+                    activeTab?.status === 'saved' && "text-primary bg-primary/10",
+                    activeTab?.status === 'error' && "text-destructive bg-destructive/10"
                   )}>
                     {activeTab?.status === 'saving' ? '保存中...' : activeTab?.status === 'saved' ? '已保存' : activeTab?.status === 'error' ? '保存失败' : ''}
                   </span>
@@ -899,8 +899,8 @@ function App() {
                     <span>{editorMode === 'wysiwyg' ? '所见即所得' : '源码'}</span>
                     <span className={cn(
                       "px-2 py-0.5 rounded text-xs",
-                      activeTab.status === 'saving' && "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
-                      activeTab.status === 'saved' && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950"
+                      activeTab.status === 'saving' && "text-muted-foreground bg-muted",
+                      activeTab.status === 'saved' && "text-primary bg-primary/10"
                     )}>
                       {activeTab.status === 'saving' ? '保存中...' : activeTab.status === 'saved' ? '已保存' : ''}
                     </span>

@@ -47,7 +47,7 @@ export const TabBar = memo(function TabBar({
               onClick={() => onActivate(path, tab.rootPath)}
             >
               {isDirty && (
-                <span className="size-1.5 rounded-full bg-amber-500 shrink-0" />
+                <span className="size-1.5 rounded-full bg-primary shrink-0" />
               )}
               <span className="truncate flex-1">{fileName}</span>
               <Button

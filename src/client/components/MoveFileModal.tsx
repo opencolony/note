@@ -77,7 +77,7 @@ function TreeNodeSelect({
             }
           }}
           className={cn(
-            'size-5 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/10',
+            'size-5 flex items-center justify-center rounded hover:bg-accent',
             (!hasChildren || isCurrentItem) && 'invisible'
           )}
         >
