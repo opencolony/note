@@ -883,6 +883,7 @@ function App() {
                 }
               }}
               isMobile={isMobile}
+              dirs={fileGroups.map(g => g.root)}
               rightContent={!isMobile && activeTabPath ? (
                 <>
                   <span className={cn(
