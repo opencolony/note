@@ -75,7 +75,7 @@ export const TabBar = memo(function TabBar({
   return (
     <div className="flex items-center bg-muted/20 border-b border-border shrink-0">
       {/* Scrollable tabs */}
-      <div className="flex items-center overflow-x-auto overflow-y-hidden flex-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex items-center overflow-x-auto overflow-y-hidden flex-1 tabbar-scroll-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
         {Array.from(grouped.entries()).map(([rootPath, keys], groupIdx) => {
           const colorIndex = rootPathToColorIndex.get(rootPath) ?? 0
           const projectColor = getProjectColor(colorIndex)

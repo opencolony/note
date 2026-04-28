@@ -940,26 +940,33 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-muted);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-muted-foreground);
-  border-radius: 4px;
+  background-color: var(--color-muted-foreground);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-foreground);
+  background-color: var(--color-foreground);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--color-foreground);
 }
 
 ::-webkit-scrollbar-corner {
-  background: var(--color-muted);
+  background: transparent;
 }
 
 /* Firefox Scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-muted-foreground) var(--color-muted);
+  scrollbar-color: var(--color-muted-foreground) transparent;
 }
 
 /* Hide scrollbar for dir tabs */
@@ -969,6 +976,16 @@
 }
 
 .dir-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for tabbar */
+.tabbar-scroll-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tabbar-scroll-hide::-webkit-scrollbar {
   display: none;
 }
 
