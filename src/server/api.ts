@@ -572,9 +572,22 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     }
 
     const limit = parseInt(c.req.query('limit') || '50', 10)
+    const rootParam = c.req.query('root')
+
+    let targetDirs: DirConfig[]
+    if (rootParam) {
+      const validatedRoot = validateRoot(rootParam, config)
+      if (!validatedRoot) {
+        return c.json({ error: 'Invalid root' }, 400)
+      }
+      targetDirs = config.dirs.filter(d => path.resolve(d.path) === validatedRoot)
+    } else {
+      targetDirs = config.dirs
+    }
+
     const results: Array<{ path: string; name: string; rootPath: string; rootName: string; matchedLine?: string; matchedContent?: string }> = []
 
-    for (const dir of config.dirs) {
+    for (const dir of targetDirs) {
       if (results.length >= limit) break
 
       const dirPath = path.resolve(dir.path)

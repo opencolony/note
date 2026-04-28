@@ -12,23 +12,50 @@ interface SearchResult {
   matchedLine?: string
 }
 
+interface DirConfig {
+  path: string
+  name?: string
+}
+
+interface FileGroup {
+  root: DirConfig
+}
+
 interface SearchDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSelect: (path: string, rootPath?: string) => void
+  activeRoot?: string | null
+  groups?: FileGroup[]
 }
 
-export function SearchDialog({ open, onOpenChange, onSelect }: SearchDialogProps) {
+function getDirName(dirPath: string, name?: string): string {
+  if (name) return name
+  const parts = dirPath.replace(/\\/g, '/').split('/').filter(Boolean)
+  return parts.pop() || dirPath
+}
+
+export function SearchDialog({ open, onOpenChange, onSelect, activeRoot, groups }: SearchDialogProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isSearching, setIsSearching] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [selectedRoot, setSelectedRoot] = useState<string | 'all'>('all')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768)
   }, [])
+
+  // 同步 activeRoot 到 selectedRoot，默认搜索当前项目
+  useEffect(() => {
+    if (open && activeRoot) {
+      setSelectedRoot(activeRoot)
+    } else if (open) {
+      setSelectedRoot('all')
+    }
+  }, [open, activeRoot])
 
   useEffect(() => {
     if (open) {
@@ -49,7 +76,14 @@ export function SearchDialog({ open, onOpenChange, onSelect }: SearchDialogProps
 
     const debounceTimer = setTimeout(() => {
       setIsSearching(true)
-      fetch(`/api/files/search?q=${encodeURIComponent(query)}&limit=50`)
+      const url = new URL('/api/files/search', window.location.origin)
+      url.searchParams.set('q', query)
+      url.searchParams.set('limit', '50')
+      if (selectedRoot !== 'all') {
+        url.searchParams.set('root', selectedRoot)
+      }
+
+      fetch(url.toString())
         .then(res => res.json())
         .then(data => {
           setResults(data.results || [])
@@ -60,7 +94,7 @@ export function SearchDialog({ open, onOpenChange, onSelect }: SearchDialogProps
     }, 200)
 
     return () => clearTimeout(debounceTimer)
-  }, [query])
+  }, [query, selectedRoot])
 
   const handleSelect = useCallback((path: string, rootPath?: string) => {
     onSelect(path, rootPath)
@@ -133,6 +167,32 @@ export function SearchDialog({ open, onOpenChange, onSelect }: SearchDialogProps
         </Button>
       </div>
 
+      {/* 项目选择器 */}
+      {groups && groups.length > 0 && (
+        <div className="flex items-center gap-1 px-4 py-2 border-b border-border overflow-x-auto">
+          <span className="text-xs text-muted-foreground shrink-0 mr-1">搜索范围:</span>
+          <Button
+            variant={selectedRoot === 'all' ? 'default' : 'ghost'}
+            size="sm"
+            className="text-xs h-7 shrink-0"
+            onClick={() => setSelectedRoot('all')}
+          >
+            全部
+          </Button>
+          {groups.map((group) => (
+            <Button
+              key={group.root.path}
+              variant={selectedRoot === group.root.path ? 'default' : 'ghost'}
+              size="sm"
+              className="text-xs h-7 shrink-0"
+              onClick={() => setSelectedRoot(group.root.path)}
+            >
+              {getDirName(group.root.path, group.root.name)}
+            </Button>
+          ))}
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto">
         {isSearching && (
           <div className="flex items-center justify-center py-12 text-muted-foreground">
@@ -159,7 +219,7 @@ export function SearchDialog({ open, onOpenChange, onSelect }: SearchDialogProps
           <div className="py-2">
             {results.map((result, index) => (
               <button
-                key={result.path}
+                key={`${result.rootPath}:${result.path}`}
                 onClick={() => handleSelect(result.path, result.rootPath)}
                 className={cn(
                   "w-full px-4 py-3 flex items-start gap-3 text-left hover:bg-accent transition-colors",

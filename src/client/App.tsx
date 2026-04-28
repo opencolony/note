@@ -956,6 +956,8 @@ function App() {
       <SearchDialog
         open={searchDialogOpen}
         onOpenChange={setSearchDialogOpen}
+        activeRoot={activeDir}
+        groups={fileGroups}
         onSelect={(path, rootPath) => {
           if (rootPath && activeDir !== rootPath) {
             setActiveDir(rootPath)
