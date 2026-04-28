@@ -2,13 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# ColonyNote
+## 项目概述
 
 Markdown 在线编辑器，支持服务端文件编辑、实时预览、Mermaid 图表和 LaTeX 公式。
 
 可作为 CLI 工具全局安装：`npm install -g colonynote` → `colonynote -d /path/to/docs`
 
-## Tmux 开发会话 ⚠️
+## Tmux 开发会话
 
 **所有开发服务的启动、停止必须在名为 `note` 的 Tmux 会话中进行。**
 
@@ -21,13 +21,13 @@ Markdown 在线编辑器，支持服务端文件编辑、实时预览、Mermaid 
 ## 构建命令
 
 ```bash
-# 全栈开发（后端 + 前端热更新）- 默认端口：前端 5787，后端 5788
+# 全栈开发（后端 + 前端热更新）- 前端 5787，后端 5788
 pnpm dev
 
 # 仅前端开发（Vite 开发服务器，端口 5787）
 pnpm dev:frontend
 
-# 仅后端开发（Hono 服务器，端口 5788）
+# 仅后端开发（Hono 服务器，端口 5787）
 pnpm dev:backend
 
 # 生产构建（前端 Vite + 后端 TypeScript 编译）
@@ -42,8 +42,11 @@ pnpm preview
 # TypeScript 类型检查
 pnpm typecheck
 
-# 运行测试
+# 运行测试（watch 模式）
 pnpm test
+
+# 运行单个测试文件
+pnpm vitest run src/path/to/file.test.ts
 ```
 
 ## 技术栈
@@ -75,11 +78,13 @@ src/
 │   │   ├── FileTree.tsx       # 文件树
 │   │   └── ...       # 各种对话框/模态框
 │   ├── hooks/        # React hooks
-│   │   ├── useFile.ts         # 文件操作（加载/保存）
+│   │   ├── useTabs.ts         # 多标签页管理（打开/关闭/保存/自动重载）
 │   │   ├── useWebSocket.ts    # WebSocket 实时同步
 │   │   └── useSearch.ts       # 搜索索引
 │   └── lib/          # 工具库
 │       ├── types.ts   # 类型定义
+│       ├── tabTypes.ts # Tab 类型定义
+│       ├── searchIntent.ts # 搜索意图解析（fuzzy/prefix/browse）
 │       └── utils.ts   # 工具函数（cn 等）
 ├── server/           # 后端 Hono 服务
 │   ├── index.ts      # 生产服务器入口（端口 5787）
@@ -117,7 +122,8 @@ bin/
 
 - **REST API**: `/api/files` 系列端点处理文件 CRUD、目录管理
 - **WebSocket**: `/ws` 连接广播文件变更事件（`file:change`）和配置重载事件（`config:reload`），实现多端实时同步
-- **URL 路由**: 使用 hash 格式 `#rootPath:filePath` 定位文件
+- **URL 路由**: 使用 hash 格式 `#rootPath:filePath` 定位文件。Tab key 格式为 `rootPath::filePath`（多项目场景），用于区分同名文件
+- **Vite 代理**（`vite.config.ts`）: 开发模式下前端端口 5787 代理 `/api` 和 `/ws` 到后端 5788；`hmr: false` 已禁用（开发模式由后端统一管理 WebSocket）
 
 ### 配置加载
 
@@ -153,9 +159,20 @@ const fileRouter = createFileRouter(holder, env)
 - 支持否定规则（`!pattern`）和目录标记（`pattern/`）
 - `matcher.updateGlobalPatterns()` 用于运行时更新全局规则
 
+### Tabs 系统
+
+多标签页由 `useTabs.ts` 统一管理，替代了早期的单文件 `useFile` 模式：
+
+- **Tab key**: `rootPath::filePath`（多项目场景）或 `filePath`（单项目），用于区分不同目录下的同名文件
+- **状态管理**: `tabsRef` 作为唯一数据源（`Map<string, OpenTab>`），`tick` state 仅用于触发 React 重渲染
+- **保存流程**: `updateTabContent()` → 防抖定时器（默认 300ms）→ `doSave()` → POST 到 `/api/files` → 更新 `lastSavedContent`
+- **Dirty 检测**: `content !== lastSavedContent`，关闭 dirty tab 时弹出确认对话框
+- **外部变更同步**: `handleWsFileChange()` 收到 `file:change` 消息后，检查 `pendingSaveSessionsRef` 和 `SAVE_IGNORE_BUFFER_MS` (5s)，避免将自身保存误判为外部修改；若 tab 非 dirty 则自动重载内容
+- **状态机**: `idle` → `saving` → `saved`/`error`，UI 根据状态显示保存中/已保存/失败提示
+
 ### 核心机制
 
-- **自动保存**: `useFile.updateContent()` 默认 300ms 防抖自动保存
+- **自动保存**: `useTabs.updateTabContent()` 默认 300ms 防抖自动保存
 - **外部修改检测**: `pendingSaveSessionsRef` + `SAVE_IGNORE_BUFFER_MS` (5s) 缓冲，避免将自己的保存误判为外部修改
 - **文件树**: 按 `dirs` 分组显示，支持多根目录切换，展开状态按目录分别保存
 - **服务端缓存**: `api.ts` 中的 `treeCache` 缓存文件树结果（3s TTL + configHash 校验），避免重复遍历目录
@@ -172,14 +189,14 @@ const fileRouter = createFileRouter(holder, env)
 
 ### Hooks
 
-- 自定义 Hook 以 `use` 开头，camelCase 命名（如 `useFile`）
+- 自定义 Hook 以 `use` 开头，camelCase 命名（如 `useTabs`）
 - 使用 `useCallback` 缓存函数引用
 - 使用 `useRef` 存储最新值，避免依赖循环
 - Hook 文件放在 `src/client/hooks/` 目录
 
 ### API 调用
 
-- API 逻辑封装在自定义 Hook 中（如 `useFile`）
+- API 逻辑封装在自定义 Hook 中（如 `useTabs`）
 - RESTful 风格：
   - `GET` → 读取
   - `POST` → 创建/保存
@@ -259,9 +276,18 @@ refactor(editor): 标题按钮改为下拉菜单，节省工具栏空间
 ## 关键设计决策
 
 - 保存时记录会话 ID（`pendingSaveSessionsRef`），避免在网络延迟时将自身的保存误判为外部修改
-- 文件树按 `dirs` 分组显示，支持多根目录切换
+- 文件树按 `dirs` 分组显示，支持多根目录切换，展开状态按目录分别保存
 - 侧边栏宽度可拖拽调整（桌面端），宽度值持久化到 localStorage
 - WebSocket 使用全局单例，多个组件共享连接
 - 文件保存使用防抖（默认 300ms）
 - TipTap editor 内部更新使用 `isInternalUpdateRef` 防止 `onUpdate` 循环触发
-- Mermaid 源码编辑使用防抖（800ms）自动渲染，避免频繁调用 render
+- Mermaid 渲染队列（`mermaidQueue.ts`）: 单例模式，LRU 缓存（最大 50 条），并发控制（最大 2 个），按 `theme::source` 键缓存渲染结果，避免频繁调用 `mermaid.render()`
+- 搜索意图解析（`searchIntent.ts`）: 将用户输入解析为三种模式 — `fuzzy`（模糊搜索）、`prefix`（前缀匹配，如 `projects/col`）、`browse`（浏览目录，如 `projects/`）
+- 开发模式 Vite `hmr: false`：前后端联调时 WebSocket 升级由后端统一管理，避免 Vite HMR 与后端 `/ws` 冲突
+
+## 功能验收
+
+完成功能或修复后：
+- 运行 `npm run typecheck` 验证无类型错误
+- **使用 chrome-devtools MCP 进行功能测试** - 通过浏览器自动化验证功能在移动端和桌面端正常工作，使用前先确定 **5787** 端口是否已启动，如果启动则直接测试，否则先使用 `pnpm dev` 启动。
+- **分析变更是否需要更新 README 和 README.zh**，如需要则进行更新
