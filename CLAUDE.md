@@ -8,16 +8,6 @@ Markdown 在线编辑器，支持服务端文件编辑、实时预览、Mermaid 
 
 可作为 CLI 工具全局安装：`npm install -g colonynote` → `colonynote -d /path/to/docs`
 
-## Tmux 开发会话
-
-**所有开发服务的启动、停止必须在名为 `note` 的 Tmux 会话中进行。**
-
-- 启动服务前先检查 `tmux ls` 是否存在 `note` 会话，不存在则 `tmux new-session -d -s note`
-- 在 `note` 会话中启动 `pnpm dev` / `pnpm dev:frontend` / `pnpm start` 等服务
-- 停止服务时通过 `tmux send-keys -t note C-c` 发送中断信号，或通过 `tmux kill-session -t note` 关闭整个会话
-- 查看服务日志使用 `tmux capture-pane -t note -p` 或直接 attach `tmux attach -t note`
-- **禁止**在当前 Shell 直接运行开发服务命令，必须通过 Tmux 会话管理
-
 ## 构建命令
 
 ```bash
@@ -285,9 +275,3 @@ refactor(editor): 标题按钮改为下拉菜单，节省工具栏空间
 - 搜索意图解析（`searchIntent.ts`）: 将用户输入解析为三种模式 — `fuzzy`（模糊搜索）、`prefix`（前缀匹配，如 `projects/col`）、`browse`（浏览目录，如 `projects/`）
 - 开发模式 Vite `hmr: false`：前后端联调时 WebSocket 升级由后端统一管理，避免 Vite HMR 与后端 `/ws` 冲突
 
-## 功能验收
-
-完成功能或修复后：
-- 运行 `npm run typecheck` 验证无类型错误
-- **使用 chrome-devtools MCP 进行功能测试** - 通过浏览器自动化验证功能在移动端和桌面端正常工作，使用前先确定 **5787** 端口是否已启动，如果启动则直接测试，否则先使用 `pnpm dev` 启动。
-- **分析变更是否需要更新 README 和 README.zh**，如需要则进行更新
