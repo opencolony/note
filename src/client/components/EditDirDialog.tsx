@@ -126,73 +126,97 @@ export const EditDirDialog = memo(function EditDirDialog({
     }
   }, [dirPath, onOpenChange])
 
-  const content = (
-    <>
-      <div className="space-y-4 py-4">
-        {dirPath && (
-          <div className="space-y-1">
-            <p className="text-sm font-medium">目录路径</p>
-            <p className="text-sm text-muted-foreground break-all">{dirPath}</p>
-          </div>
-        )}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">显示名称</label>
+  const formContent = (
+    <div className="space-y-4">
+      {/* 路径徽章 */}
+      {dirPath && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 border border-border/40">
+          <div className="size-2 rounded-full bg-emerald-500 shrink-0" />
+          <span className="text-xs text-muted-foreground truncate">{dirPath}</span>
+        </div>
+      )}
+
+      {/* 主表单区 */}
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-medium text-foreground mb-1.5 block">
+            显示名称
+          </label>
           <Input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder={dirPath ? dirPath.split('/').pop() || dirPath : '输入显示名称'}
             disabled={isSaving}
           />
+          <p className="text-xs text-muted-foreground/60 mt-1.5">
+            此名称将显示在目录切换器中
+          </p>
         </div>
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
-        <div className="flex justify-between gap-2">
+      </div>
+
+      {error && (
+        <p className="text-sm text-destructive">{error}</p>
+      )}
+
+      {/* 危险操作区 */}
+      <div className="rounded-xl border border-destructive/15 bg-destructive/[0.03] p-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium text-foreground mb-0.5">从列表中移除</p>
+            <p className="text-xs text-muted-foreground/70">文件不会被删除</p>
+          </div>
           <Button
-            variant="destructive"
+            variant="outline"
             size="sm"
             onClick={() => setDeleteConfirmOpen(true)}
             disabled={isSaving || isDeleting || isCli}
             title={isCli ? 'CLI启动的目录无法删除' : undefined}
+            className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive text-xs"
           >
-            <Trash2 className="size-4 mr-1" />
-            删除目录
+            <Trash2 className="size-3.5 mr-1" />
+            移除
           </Button>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSaving}
-            >
-              取消
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-            >
-              {isSaving ? '保存中...' : '保存'}
-            </Button>
-          </div>
         </div>
       </div>
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确定要移除目录吗？</AlertDialogTitle>
-            <AlertDialogDescription>
-              文件不会被删除，只是从列表中移除。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? '删除中...' : '确认移除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+      {/* 底部操作 */}
+      <div className="flex gap-2 pt-1">
+        <Button
+          variant="outline"
+          className="flex-1"
+          onClick={() => onOpenChange(false)}
+          disabled={isSaving}
+        >
+          取消
+        </Button>
+        <Button
+          className="flex-1"
+          onClick={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? '保存中...' : '保存'}
+        </Button>
+      </div>
+    </div>
+  )
+
+  const alertDialog = (
+    <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确定要移除目录吗？</AlertDialogTitle>
+          <AlertDialogDescription>
+            文件不会被删除，只是从列表中移除。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+            {isDeleting ? '删除中...' : '确认移除'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 
   if (isMobile) {
@@ -205,9 +229,10 @@ export const EditDirDialog = memo(function EditDirDialog({
               修改显示名称或删除目录
             </SheetDescription>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto">
-            {content}
+          <div className="flex-1 overflow-y-auto py-4">
+            {formContent}
           </div>
+          {alertDialog}
         </SheetContent>
       </Sheet>
     )
@@ -222,7 +247,10 @@ export const EditDirDialog = memo(function EditDirDialog({
             修改显示名称或删除目录
           </DialogDescription>
         </DialogHeader>
-        {content}
+        <div className="py-2">
+          {formContent}
+        </div>
+        {alertDialog}
       </DialogContent>
     </Dialog>
   )
