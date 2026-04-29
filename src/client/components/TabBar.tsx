@@ -75,25 +75,27 @@ export const TabBar = memo(function TabBar({
   return (
     <div className="flex items-center bg-muted/20 border-b border-border shrink-0">
       {/* Scrollable tabs */}
-      <div className="flex items-center overflow-x-auto overflow-y-hidden flex-1 tabbar-scroll-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex items-center gap-1.5 px-3 py-2 overflow-x-auto overflow-y-hidden flex-1 tabbar-scroll-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
         {Array.from(grouped.entries()).map(([rootPath, keys], groupIdx) => {
           const colorIndex = rootPathToColorIndex.get(rootPath) ?? 0
           const projectColor = getProjectColor(colorIndex)
 
           return (
-            <div key={rootPath ?? 'null'} className="flex items-center">
-              {/* 组头 — 标签式，左边彩色竖线标识 */}
-              {showGroups && (
-                <div
-                  className="relative flex items-center h-9 px-2 text-[10px] font-medium text-muted-foreground bg-muted/40 border-r border-border shrink-0 select-none"
-                >
-                  {/* 左侧彩色标识条 */}
-                  <div
-                    className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full"
-                    style={{ backgroundColor: projectColor }}
-                  />
-                  <span className="ml-1.5">{getDirName(rootPath, dirs)}</span>
+            <div key={rootPath ?? 'null'} className="flex items-center gap-1.5 shrink-0">
+              {/* 组间彩色竖线分隔 */}
+              {showGroups && groupIdx > 0 && (
+                <div className="flex items-center self-stretch px-1 shrink-0">
+                  <div className="w-[2px] h-5 rounded-full" style={{ backgroundColor: projectColor }} />
                 </div>
+              )}
+              {/* 组名标签 */}
+              {showGroups && (
+                <span
+                  className="px-2 py-1 text-[10px] font-medium text-muted-foreground bg-muted/40 rounded shrink-0 select-none"
+                  style={{ color: projectColor }}
+                >
+                  {getDirName(rootPath, dirs)}
+                </span>
               )}
               {/* 组内 tabs */}
               {keys.map(key => {
@@ -107,10 +109,10 @@ export const TabBar = memo(function TabBar({
                   <div
                     key={key}
                     className={cn(
-                      'group flex items-center gap-1.5 h-9 px-3 text-xs cursor-pointer border-r border-border min-w-[100px] max-w-[200px] shrink-0 select-none transition-colors',
+                      'group flex items-center gap-1.5 px-3 py-1.5 text-xs cursor-pointer rounded-lg border min-w-[100px] max-w-[200px] shrink-0 select-none transition-all duration-150',
                       isActive
-                        ? 'bg-background text-foreground'
-                        : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                        ? 'bg-background text-foreground border-border shadow-sm translate-y-[-1px]'
+                        : 'bg-transparent text-muted-foreground border-transparent hover:bg-muted/50'
                     )}
                     onClick={() => onActivate(key)}
                   >
@@ -144,10 +146,6 @@ export const TabBar = memo(function TabBar({
                   </div>
                 )
               })}
-              {/* 组间分隔 */}
-              {showGroups && groupIdx < grouped.size - 1 && (
-                <div className="w-px h-5 bg-border mx-1 shrink-0" />
-              )}
             </div>
           )
         })}

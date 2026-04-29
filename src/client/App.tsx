@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef, memo } from 'react'
-import { Plus, Code, Eye, List, FileText, Folder, FolderOpen, Search, X, Settings, AlertCircle, Sun, Moon, Monitor } from 'lucide-react'
+import { useState, useCallback, useEffect, useRef, memo, lazy, Suspense } from 'react'
+import { Plus, Code, Eye, List, FileText, Folder, FolderOpen, Search, X, Settings, AlertCircle, Sun, Moon, Monitor, FlaskConical } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useTabs } from './hooks/useTabs'
 import { FileTree } from './components/FileTree'
@@ -27,6 +27,11 @@ import {
 } from './components/ui/alert-dialog'
 import { cn } from './lib/utils'
 import type { DirConfig } from './lib/types'
+
+// Lazy load Playground in dev only — entire chunk is tree-shaken in production
+const PlaygroundLazy = import.meta.env.DEV
+  ? lazy(() => import('./components/Playground'))
+  : null
 
 interface FileNode {
   name: string
@@ -113,6 +118,16 @@ const SidebarContent = memo(function SidebarContent({
           {onClose && (
             <Button variant="ghost" size="icon" onClick={onClose} title="关闭" className="md:hidden">
               <X className="size-4" />
+            </Button>
+          )}
+          {import.meta.env.DEV && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => window.dispatchEvent(new CustomEvent('playground-toggle'))}
+              title="组件实验"
+            >
+              <FlaskConical className="size-4" />
             </Button>
           )}
           <Button variant="ghost" size="icon" onClick={onSettingsOpen} title="设置">
@@ -222,6 +237,9 @@ function App() {
     return 'system'
   })
 
+  // Playground view mode (dev only)
+  const [viewMode, setViewMode] = useState<'editor' | 'playground'>('editor')
+
   // Close tab confirmation state
   const [closingTabPath, setClosingTabPath] = useState<string | null>(null)
 
@@ -252,6 +270,14 @@ function App() {
     onSave: () => {},
     onError: (e) => console.error(e),
   })
+
+  // Playground toggle event listener (dev only)
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    const handler = () => setViewMode('playground')
+    window.addEventListener('playground-toggle', handler)
+    return () => window.removeEventListener('playground-toggle', handler)
+  }, [])
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -864,8 +890,8 @@ function App() {
         )}
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Tab bar */}
-          {tabOrder.length > 0 && (
+          {/* Tab bar — hidden in playground mode */}
+          {!(import.meta.env.DEV && viewMode === 'playground') && tabOrder.length > 0 && (
             <TabBar
               tabOrder={tabOrder}
               tabs={tabs}
@@ -906,7 +932,15 @@ function App() {
           )}
 
           <div className="flex flex-1 overflow-hidden">
-            {!activeTabPath ? (
+            {import.meta.env.DEV && viewMode === 'playground' && PlaygroundLazy ? (
+              <Suspense fallback={
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                  <span className="text-sm">加载中...</span>
+                </div>
+              }>
+                <PlaygroundLazy onClose={() => setViewMode('editor')} />
+              </Suspense>
+            ) : !activeTabPath ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm text-center p-6 flex-1">
                 <FileText className="size-12 mb-4 opacity-50" />
                 <div>选择一个文件开始编辑</div>
