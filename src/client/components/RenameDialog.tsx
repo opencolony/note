@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { File, Folder } from 'lucide-react'
 import {
   Dialog,
@@ -15,21 +15,30 @@ interface RenameDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string } | null
-  onRename: (oldPath: string, newName: string, rootPath: string) => void
+  onRename: (oldPath: string, newName: string, rootPath: string, isDirectory: boolean) => void
 }
 
 export function RenameDialog({ open, onOpenChange, item, onRename }: RenameDialogProps) {
   const [name, setName] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (item) {
-      setName(item.type === 'directory' ? item.name : item.name.replace(/\.md$/, ''))
+      setName(item.name)
+      if (item.type === 'file') {
+        const dotIndex = item.name.lastIndexOf('.')
+        if (dotIndex > 0) {
+          setTimeout(() => {
+            inputRef.current?.setSelectionRange(dotIndex, dotIndex)
+          }, 0)
+        }
+      }
     }
   }, [item])
 
   const handleSubmit = () => {
     if (item && name.trim()) {
-      onRename(item.path, name.trim(), item.rootPath)
+      onRename(item.path, name.trim(), item.rootPath, item.type === 'directory')
       onOpenChange(false)
     }
   }
@@ -52,6 +61,7 @@ export function RenameDialog({ open, onOpenChange, item, onRename }: RenameDialo
             <File className="size-5 shrink-0 text-muted-foreground" />
           )}
           <Input
+            ref={inputRef}
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {

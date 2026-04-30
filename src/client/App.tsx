@@ -486,7 +486,7 @@ function App() {
 
   const handleCreateSubmit = useCallback(async (name: string, isDirectory: boolean) => {
     try {
-      const fileName = isDirectory ? name : `${name}.md`
+      const fileName = isDirectory || name.includes('.') ? name : `${name}.md`
       await fetch('/api/files', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -582,13 +582,11 @@ function App() {
     }
   }, [fetchFiles, tabs, closeTab])
 
-  const handleRename = useCallback(async (filePath: string, newName: string, rootPath: string) => {
+  const handleRename = useCallback(async (filePath: string, newName: string, rootPath: string, isDirectory: boolean) => {
     try {
       const parentPath = filePath.substring(0, filePath.lastIndexOf('/'))
-      const oldName = filePath.split('/').pop() || ''
       const oldPath = filePath
-      const isDirectory = !oldName.includes('.')
-      const newFileName = isDirectory ? newName : `${newName}.md`
+      const newFileName = newName
       const newPath = parentPath ? `${parentPath}/${newFileName}` : `/${newFileName}`
 
       await fetch('/api/files', {
@@ -681,7 +679,7 @@ function App() {
 
   const handleCreateFile = useCallback(async (name: string, isDirectory: boolean, parentPath: string) => {
     try {
-      const fileName = isDirectory ? name : `${name}.md`
+      const fileName = isDirectory || name.includes('.') ? name : `${name}.md`
       
       await fetch('/api/files', {
         method: 'POST',
@@ -1020,10 +1018,10 @@ function App() {
         open={renameDialogOpen}
         onOpenChange={setRenameDialogOpen}
         item={renameItem}
-        onRename={(oldPath, newName, rootPath) => {
+        onRename={(oldPath, newName, rootPath, isDirectory) => {
           setRenameItem(null)
           setRenameDialogOpen(false)
-          handleRename(oldPath, newName, rootPath)
+          handleRename(oldPath, newName, rootPath, isDirectory)
         }}
       />
 

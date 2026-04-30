@@ -1,4 +1,4 @@
-import { useState, memo, useEffect } from 'react'
+import { useState, memo, useEffect, useRef } from 'react'
 import { Folder, FileText } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet'
 import { Button } from './ui/button'
@@ -14,10 +14,16 @@ interface CreateFileModalProps {
 export const CreateFileModal = memo(function CreateFileModal({ visible, onClose, onCreate, currentDir }: CreateFileModalProps) {
   const [name, setName] = useState('')
   const [isDirectory, setIsDirectory] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (visible) {
-      setName('')
+      setIsDirectory(false)
+      setName('.md')
+      setTimeout(() => {
+        inputRef.current?.setSelectionRange(0, 0)
+        inputRef.current?.focus()
+      }, 50)
     }
   }, [visible])
 
@@ -57,7 +63,16 @@ export const CreateFileModal = memo(function CreateFileModal({ visible, onClose,
           <div className="flex gap-2">
             <Button
               variant={isDirectory ? 'outline' : 'default'}
-              onClick={() => setIsDirectory(false)}
+              onClick={() => {
+                setIsDirectory(false)
+                if (!name) {
+                  setName('.md')
+                  setTimeout(() => {
+                    inputRef.current?.setSelectionRange(0, 0)
+                    inputRef.current?.focus()
+                  }, 0)
+                }
+              }}
               className="flex-1 h-11"
             >
               <FileText className="size-4 mr-2" />
@@ -65,7 +80,12 @@ export const CreateFileModal = memo(function CreateFileModal({ visible, onClose,
             </Button>
             <Button
               variant={isDirectory ? 'default' : 'outline'}
-              onClick={() => setIsDirectory(true)}
+              onClick={() => {
+                setIsDirectory(true)
+                if (name === '.md') {
+                  setName('')
+                }
+              }}
               className="flex-1 h-11"
             >
               <Folder className="size-4 mr-2" />
@@ -73,7 +93,8 @@ export const CreateFileModal = memo(function CreateFileModal({ visible, onClose,
             </Button>
           </div>
           <Input
-            placeholder={isDirectory ? '文件夹名称' : '文件名称 (自动添加 .md)'}
+            ref={inputRef}
+            placeholder={isDirectory ? '文件夹名称' : '文件名称，如 note.md'}
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={handleKeyDown}

@@ -81,10 +81,19 @@ const TreeNode = memo(function TreeNode({ node, activePath, expandedPaths, setEx
   const childrenCount = node.children?.length || 0
   useEffect(() => {
     if (editingType && node.path === currentDir) {
+      if (editingType === 'file') {
+        setEditName('.md')
+      } else if (editName === '.md') {
+        setEditName('')
+      }
       setTimeout(() => {
         inputRef.current?.focus()
+        if (editingType === 'file') {
+          inputRef.current?.setSelectionRange(0, 0)
+        }
       }, 50)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingType, currentDir])
 
   const handleEditSubmit = () => {
@@ -223,7 +232,7 @@ const TreeNode = memo(function TreeNode({ node, activePath, expandedPaths, setEx
                   <Input
                     ref={inputRef}
                     id={`create-input-${node.path}`}
-                    placeholder={editingType === 'directory' ? '文件夹名称' : '文件名称'}
+                    placeholder={editingType === 'directory' ? '文件夹名称' : '文件名称，如 note.md'}
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     onKeyDown={(e) => {
@@ -324,9 +333,20 @@ export const FileTree = memo(function FileTree({ files, activePath, activeRoot, 
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (editingType && inputRef.current) {
-      inputRef.current.focus()
+    if (editingType) {
+      if (editingType === 'file') {
+        setEditName('.md')
+      } else if (editName === '.md') {
+        setEditName('')
+      }
+      setTimeout(() => {
+        inputRef.current?.focus()
+        if (editingType === 'file') {
+          inputRef.current?.setSelectionRange(0, 0)
+        }
+      }, 50)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingType])
 
   const handleEditSubmit = () => {
@@ -439,8 +459,9 @@ export const FileTree = memo(function FileTree({ files, activePath, activeRoot, 
                       <FileText className="size-4 shrink-0 text-muted-foreground" />
                     )}
                     <Input
+                      ref={inputRef}
                       id="root-create-input"
-                      placeholder={editingType === 'directory' ? '文件夹名称' : '文件名称'}
+                      placeholder={editingType === 'directory' ? '文件夹名称' : '文件名称，如 note.md'}
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       onKeyDown={handleEditKeyDown}
