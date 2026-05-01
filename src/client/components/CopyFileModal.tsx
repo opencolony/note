@@ -203,8 +203,8 @@ export function CopyFileModal({
           </div>
         )}
 
-        <ScrollArea className="flex-1 max-h-[300px] border rounded-md p-2">
-          <div className="space-y-0.5">
+        <ScrollArea className="h-[300px] border rounded-md">
+          <div className="p-2 space-y-0.5">
             <div
               className={cn(
                 'flex items-center gap-1 py-1.5 px-2 rounded-md cursor-pointer hover:bg-accent',
