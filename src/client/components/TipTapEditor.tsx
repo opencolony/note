@@ -22,6 +22,7 @@ import { MermaidFullscreenDialog } from './MermaidFullscreenDialog'
 import { EditorToolbar } from './EditorToolbar'
 import { FrontmatterPanel } from './FrontmatterPanel'
 import { extractFrontmatter } from '../extensions/frontmatter'
+import { MathInline, MathBlock, preprocessMathInMarkdown } from '../extensions/math'
 import { mermaidQueue } from '../lib/mermaidQueue'
 
 const lowlight = createLowlight(common)
@@ -310,7 +311,8 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
   })
 
   // Extract frontmatter from value externally, so the editor only sees body content
-  const { frontmatter: rawFrontmatter, body: bodyContent } = extractFrontmatter(value)
+  const { frontmatter: rawFrontmatter, body: bodyContentRaw } = extractFrontmatter(value)
+  const bodyContent = preprocessMathInMarkdown(bodyContentRaw)
   const [displayFrontmatter, setDisplayFrontmatter] = useState<string | null>(rawFrontmatter)
   frontmatterRef.current = displayFrontmatter
   const editorRef = useRef<Editor | null>(null) as React.MutableRefObject<Editor | null>
@@ -515,6 +517,8 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       }),
       Underline,
       Typography,
+      MathInline,
+      MathBlock,
     ],
     content: bodyContent,
     editable: !readOnly && mode === 'wysiwyg',
@@ -567,6 +571,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
 
     const { frontmatter: fm, body } = extractFrontmatter(value)
     frontmatterRef.current = fm
+    const processedBody = preprocessMathInMarkdown(body)
 
     let editorMarkdown = ''
     try {
@@ -586,7 +591,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     const { from, to } = editor.state.selection
 
     isInternalUpdateRef.current = true
-    editor.commands.setContent(body)
+    editor.commands.setContent(processedBody)
     lastNotifiedValueRef.current = value
 
     requestAnimationFrame(() => {
