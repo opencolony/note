@@ -282,7 +282,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
     // Find matching tab(s) by path + rootPath
     for (const [key, tab] of tabsRef.current) {
       if (tab.path !== changedPath) continue
-      if (rootPath !== undefined && tab.rootPath !== rootPath) continue
+      if (rootPath !== undefined && tab.rootPath != null && tab.rootPath !== rootPath) continue
 
       // Check if this is our own save
       const sessions = pendingSaveSessionsRef.current.get(key)

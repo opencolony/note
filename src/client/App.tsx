@@ -381,7 +381,7 @@ function App() {
         const hash = decodeURIComponent(window.location.hash.slice(1))
         const colonIndex = hash.indexOf(':')
         const rootFromHash = colonIndex > 0 ? hash.substring(0, colonIndex) : null
-        
+
         if (rootFromHash) {
           const rootExists = data.groups.some((g: { root: { path: string } }) => g.root.path === rootFromHash)
           setActiveDir(rootExists ? rootFromHash : data.groups[0].root.path)
@@ -429,11 +429,6 @@ function App() {
       const changedPath = data.path
       const rootPath = data.rootPath
       if (!changedPath) return
-
-      // Check if the changed path belongs to the active directory
-      if (rootPath && activeDir && rootPath !== activeDir) {
-        return
-      }
 
       handleWsFileChange(changedPath, rootPath, fetchFiles)
     }
