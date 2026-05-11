@@ -10,6 +10,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    include: ['@radix-ui/react-context-menu'],
+  },
   server: {
     port: 5787,
     host: true,

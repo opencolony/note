@@ -28,6 +28,12 @@ interface UseTabsReturn {
   getActiveTab: () => OpenTab | null
   handleWsFileChange: (changedPath: string, rootPath: string | undefined, fetchFiles: () => void) => void
   togglePin: (key: string) => void
+  closeOtherTabs: (key: string) => void
+  closeRightTabs: (key: string) => void
+  closeLeftTabs: (key: string) => void
+  closeAllTabs: () => void
+  closeGroupTabs: (rootPath: string | null) => void
+  closeOtherGroupTabs: (rootPath: string | null) => void
 }
 
 export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
@@ -201,17 +207,20 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
       })
   }, [makeTab, bump])
 
-  const closeTab = useCallback((key: string) => {
-    // Clear debounce timer
+  // Helper: clear internal state for a tab without removing from tabOrder
+  const clearTabInternals = useCallback((key: string) => {
     const timeout = saveTimeoutsRef.current.get(key)
     if (timeout) {
       clearTimeout(timeout)
       saveTimeoutsRef.current.delete(key)
     }
-
-    // Clear save tracking
     pendingSaveSessionsRef.current.delete(key)
     lastSelfSaveTimeRef.current.delete(key)
+    tabsRef.current.delete(key)
+  }, [])
+
+  const closeTab = useCallback((key: string) => {
+    clearTabInternals(key)
 
     setTabOrder(prev => {
       const idx = prev.indexOf(key)
@@ -241,9 +250,163 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
       return newOrder
     })
 
-    tabsRef.current.delete(key)
     bump()
-  }, [bump])
+  }, [clearTabInternals, bump])
+
+  const closeOtherTabs = useCallback((key: string) => {
+    setTabOrder(prev => {
+      const keysToClose = prev.filter(k => k !== key)
+      for (const k of keysToClose) {
+        clearTabInternals(k)
+      }
+
+      // Ensure the remaining tab is active
+      if (activeTabPath !== key) {
+        setActiveTabPath(key)
+        const tab = tabsRef.current.get(key)
+        if (tab?.rootPath) {
+          window.location.hash = `${tab.rootPath}:${tab.path}`
+        } else if (tab) {
+          window.location.hash = tab.path
+        }
+      }
+
+      return [key]
+    })
+    bump()
+  }, [activeTabPath, clearTabInternals, bump])
+
+  const closeRightTabs = useCallback((key: string) => {
+    setTabOrder(prev => {
+      const idx = prev.indexOf(key)
+      if (idx === -1) return prev
+      const keysToClose = prev.slice(idx + 1)
+      for (const k of keysToClose) {
+        clearTabInternals(k)
+      }
+      const newOrder = prev.slice(0, idx + 1)
+
+      // If active tab was closed, activate the key tab
+      if (activeTabPath && !newOrder.includes(activeTabPath)) {
+        setActiveTabPath(key)
+        const tab = tabsRef.current.get(key)
+        if (tab?.rootPath) {
+          window.location.hash = `${tab.rootPath}:${tab.path}`
+        } else if (tab) {
+          window.location.hash = tab.path
+        }
+      }
+
+      return newOrder
+    })
+    bump()
+  }, [activeTabPath, clearTabInternals, bump])
+
+  const closeLeftTabs = useCallback((key: string) => {
+    setTabOrder(prev => {
+      const idx = prev.indexOf(key)
+      if (idx === -1) return prev
+      const keysToClose = prev.slice(0, idx)
+      for (const k of keysToClose) {
+        clearTabInternals(k)
+      }
+      const newOrder = prev.slice(idx)
+
+      // If active tab was closed, activate the key tab
+      if (activeTabPath && !newOrder.includes(activeTabPath)) {
+        setActiveTabPath(key)
+        const tab = tabsRef.current.get(key)
+        if (tab?.rootPath) {
+          window.location.hash = `${tab.rootPath}:${tab.path}`
+        } else if (tab) {
+          window.location.hash = tab.path
+        }
+      }
+
+      return newOrder
+    })
+    bump()
+  }, [activeTabPath, clearTabInternals, bump])
+
+  const closeAllTabs = useCallback(() => {
+    setTabOrder(prev => {
+      for (const k of prev) {
+        clearTabInternals(k)
+      }
+      window.location.hash = ''
+      return []
+    })
+    setActiveTabPath(null)
+    bump()
+  }, [clearTabInternals, bump])
+
+  const closeGroupTabs = useCallback((rootPath: string | null) => {
+    setTabOrder(prev => {
+      const keysToClose = prev.filter(k => {
+        const tab = tabsRef.current.get(k)
+        return tab?.rootPath === rootPath
+      })
+      for (const k of keysToClose) {
+        clearTabInternals(k)
+      }
+      const newOrder = prev.filter(k => {
+        const tab = tabsRef.current.get(k)
+        return tab?.rootPath !== rootPath
+      })
+
+      // If active tab was closed, activate first remaining tab
+      if (activeTabPath && !newOrder.includes(activeTabPath) && newOrder.length > 0) {
+        const newKey = newOrder[0]
+        setActiveTabPath(newKey)
+        const tab = tabsRef.current.get(newKey)
+        if (tab?.rootPath) {
+          window.location.hash = `${tab.rootPath}:${tab.path}`
+        } else if (tab) {
+          window.location.hash = tab.path
+        }
+      } else if (newOrder.length === 0) {
+        setActiveTabPath(null)
+        window.location.hash = ''
+      }
+
+      return newOrder
+    })
+    bump()
+  }, [activeTabPath, clearTabInternals, bump])
+
+  const closeOtherGroupTabs = useCallback((rootPath: string | null) => {
+    setTabOrder(prev => {
+      const keysToClose = prev.filter(k => {
+        const tab = tabsRef.current.get(k)
+        return tab?.rootPath !== rootPath
+      })
+      for (const k of keysToClose) {
+        clearTabInternals(k)
+      }
+      const newOrder = prev.filter(k => {
+        const tab = tabsRef.current.get(k)
+        return tab?.rootPath === rootPath
+      })
+
+      // If active tab was closed, activate first remaining tab
+      if (activeTabPath && !newOrder.includes(activeTabPath) && newOrder.length > 0) {
+        const newKey = newOrder[0]
+        setActiveTabPath(newKey)
+        const tab = tabsRef.current.get(newKey)
+        if (tab?.rootPath) {
+          window.location.hash = `${tab.rootPath}:${tab.path}`
+        } else if (tab) {
+          window.location.hash = tab.path
+        }
+      } else if (newOrder.length === 0) {
+        setActiveTabPath(null)
+        window.location.hash = ''
+      }
+
+      return newOrder
+    })
+    bump()
+  }, [activeTabPath, clearTabInternals, bump])
 
   const togglePin = useCallback((key: string) => {
     const tab = tabsRef.current.get(key)
@@ -508,5 +671,11 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
     getActiveTab: getActiveTabSync,
     handleWsFileChange,
     togglePin,
+    closeOtherTabs,
+    closeRightTabs,
+    closeLeftTabs,
+    closeAllTabs,
+    closeGroupTabs,
+    closeOtherGroupTabs,
   }
 }

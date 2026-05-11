@@ -283,6 +283,12 @@ function App() {
     getActiveTab,
     handleWsFileChange,
     togglePin,
+    closeOtherTabs,
+    closeRightTabs,
+    closeLeftTabs,
+    closeAllTabs,
+    closeGroupTabs,
+    closeOtherGroupTabs,
   } = useTabs({
     onSaveStart: () => {},
     onSave: () => {},
@@ -920,6 +926,12 @@ function App() {
                 }
               }}
               onTogglePin={togglePin}
+              onCloseOtherTabs={closeOtherTabs}
+              onCloseRightTabs={closeRightTabs}
+              onCloseLeftTabs={closeLeftTabs}
+              onCloseAllTabs={closeAllTabs}
+              onCloseGroupTabs={closeGroupTabs}
+              onCloseOtherGroupTabs={closeOtherGroupTabs}
               isMobile={isMobile}
               dirs={fileGroups.map(g => g.root)}
               rightContent={!isMobile && activeTabPath ? (
