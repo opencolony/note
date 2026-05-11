@@ -1,15 +1,16 @@
 import { memo, type ReactNode, useMemo } from 'react'
-import { X } from 'lucide-react'
+import { X, Pin } from 'lucide-react'
 import { Button } from './ui/button'
 import { cn } from '../lib/utils'
 import type { DirConfig } from '../lib/types'
 
 interface TabBarProps {
   tabOrder: string[]
-  tabs: Map<string, { key: string; path: string; content: string; lastSavedContent: string; rootPath: string | null; status?: string }>
+  tabs: Map<string, { key: string; path: string; content: string; lastSavedContent: string; rootPath: string | null; status?: string; isPinned: boolean; isPreview: boolean }>
   activeTabKey: string | null
   onActivate: (key: string) => void
   onCloseRequest: (key: string) => void
+  onTogglePin: (key: string) => void
   isMobile: boolean
   rightContent?: ReactNode
   dirs?: DirConfig[]
@@ -41,6 +42,7 @@ export const TabBar = memo(function TabBar({
   activeTabKey,
   onActivate,
   onCloseRequest,
+  onTogglePin,
   isMobile,
   rightContent,
   dirs,
@@ -104,6 +106,8 @@ export const TabBar = memo(function TabBar({
                 const fileName = tab.path.split('/').pop() || tab.path
                 const isActive = key === activeTabKey
                 const isDirty = tab.content !== tab.lastSavedContent
+                const isPinned = tab.isPinned
+                const isPreview = tab.isPreview
 
                 return (
                   <div
@@ -115,18 +119,66 @@ export const TabBar = memo(function TabBar({
                         : 'bg-transparent text-muted-foreground border-transparent hover:bg-muted/50'
                     )}
                     onClick={() => onActivate(key)}
+                    onDoubleClick={() => onTogglePin(key)}
                   >
-                    {/* 项目色圆点 — 多项目时显示 */}
-                    {showGroups && (
+                    {/* 项目色圆点 — 多项目时显示（非 pinned） */}
+                    {showGroups && !isPinned && (
                       <span
                         className="size-1.5 rounded-full shrink-0"
                         style={{ backgroundColor: projectColor }}
                       />
                     )}
-                    {isDirty && (
+                    {/* Pinned 图标 */}
+                    {isPinned && (
+                      <Pin className="size-3 text-muted-foreground shrink-0 fill-muted-foreground" />
+                    )}
+                    {/* Dirty 圆点 */}
+                    {isDirty && !isPinned && (
                       <span className="size-1.5 rounded-full bg-primary shrink-0" />
                     )}
-                    <span className="truncate flex-1">{fileName}</span>
+                    {/* 文件名 — preview 用斜体 */}
+                    <span className={cn('truncate flex-1', isPreview && 'italic opacity-80')}>
+                      {fileName}
+                    </span>
+                    {/* Pin 按钮 — hover 显示（桌面端），移动端一直显示 */}
+                    {!isPinned && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          'size-5 min-w-5 min-h-5 shrink-0 rounded-sm',
+                          isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                          isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onTogglePin(key)
+                        }}
+                        title="固定标签"
+                      >
+                        <Pin className="size-3" />
+                      </Button>
+                    )}
+                    {/* Unpin 按钮 — pinned tab 显示 */}
+                    {isPinned && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          'size-5 min-w-5 min-h-5 shrink-0 rounded-sm',
+                          isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                          isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onTogglePin(key)
+                        }}
+                        title="取消固定"
+                      >
+                        <Pin className="size-3 fill-muted-foreground" />
+                      </Button>
+                    )}
+                    {/* 关闭按钮 */}
                     <Button
                       variant="ghost"
                       size="icon"

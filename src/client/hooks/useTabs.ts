@@ -18,14 +18,16 @@ interface UseTabsReturn {
   tabs: Map<string, OpenTab>
   tabOrder: string[]
   activeTabPath: string | null
-  openTab: (path: string, rootPath: string | null) => void
+  openTab: (path: string, rootPath: string | null, options?: { asPreview?: boolean }) => void
   closeTab: (key: string) => void
   updateTabContent: (key: string, newContent: string, debounceMs?: number) => void
   saveTab: (key: string) => void
   saveAllTabs: () => void
   isTabDirty: (key: string) => boolean
+  isTabPinned: (key: string) => boolean
   getActiveTab: () => OpenTab | null
   handleWsFileChange: (changedPath: string, rootPath: string | undefined, fetchFiles: () => void) => void
+  togglePin: (key: string) => void
 }
 
 export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
@@ -59,6 +61,8 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
     status: 'idle',
     saveSessionId: null,
     lastSelfSaveTime: null,
+    isPinned: false,
+    isPreview: false,
   }), [])
 
   const doSave = useCallback(async (tab: OpenTab, rootPath: string | null) => {
@@ -123,8 +127,9 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
     }
   }, [bump])
 
-  const openTab = useCallback((path: string, rootPath: string | null) => {
+  const openTab = useCallback((path: string, rootPath: string | null, options?: { asPreview?: boolean }) => {
     const tabKey = makeTabKey(path, rootPath)
+    const asPreview = options?.asPreview !== false // 默认 preview
 
     // Update URL hash
     if (rootPath) {
@@ -140,16 +145,39 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
     }
 
     setTabOrder(prev => {
-      if (prev.includes(tabKey)) {
-        return prev
+      // If there's a clean preview tab, replace it
+      let newOrder = prev
+      if (asPreview) {
+        const previewKey = prev.find(k => {
+          const t = tabsRef.current.get(k)
+          return t?.isPreview && t.content === t.lastSavedContent
+        })
+        if (previewKey) {
+          // Close the old preview tab
+          const oldTimeout = saveTimeoutsRef.current.get(previewKey)
+          if (oldTimeout) {
+            clearTimeout(oldTimeout)
+            saveTimeoutsRef.current.delete(previewKey)
+          }
+          pendingSaveSessionsRef.current.delete(previewKey)
+          lastSelfSaveTimeRef.current.delete(previewKey)
+          tabsRef.current.delete(previewKey)
+          newOrder = prev.filter(k => k !== previewKey)
+        }
       }
-      const newOrder = [...prev, tabKey]
+
+      if (newOrder.includes(tabKey)) {
+        return newOrder
+      }
+      const result = [...newOrder, tabKey]
       setActiveTabPath(tabKey)
-      return newOrder
+      return result
     })
 
-    // Create placeholder tab
-    tabsRef.current.set(tabKey, makeTab(path, rootPath))
+    // Create tab
+    const newTab = makeTab(path, rootPath)
+    newTab.isPreview = asPreview
+    tabsRef.current.set(tabKey, newTab)
     bump()
 
     // Fetch content from server
@@ -217,11 +245,35 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
     bump()
   }, [bump])
 
+  const togglePin = useCallback((key: string) => {
+    const tab = tabsRef.current.get(key)
+    if (!tab) return
+
+    const newPinned = !tab.isPinned
+    // 取消固定时，如果文件是 clean 的，恢复为 preview；否则保持持久化
+    const newPreview = !newPinned && tab.content === tab.lastSavedContent
+    tabsRef.current.set(key, { ...tab, isPinned: newPinned, isPreview: newPreview })
+    bump()
+
+    // Reorder: pinned tabs first
+    setTabOrder(prev => {
+      const pinned = prev.filter(k => tabsRef.current.get(k)?.isPinned)
+      const unpinned = prev.filter(k => !tabsRef.current.get(k)?.isPinned)
+      return [...pinned, ...unpinned]
+    })
+  }, [bump])
+
   const updateTabContent = useCallback((key: string, newContent: string, debounceMs: number = 300) => {
     // Sync to ref immediately — this is ALWAYS the latest
     const currentTab = tabsRef.current.get(key)
     if (currentTab) {
-      const updated = { ...currentTab, content: newContent, status: currentTab.status === 'saved' ? 'idle' : currentTab.status }
+      const updated: OpenTab = {
+        ...currentTab,
+        content: newContent,
+        status: currentTab.status === 'saved' ? 'idle' : currentTab.status,
+        // Editing a preview tab promotes it to a persistent tab
+        isPreview: false,
+      }
       tabsRef.current.set(key, updated)
     }
     bump()
@@ -334,11 +386,13 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         return
       }
 
-      const data = JSON.parse(raw) as { tabOrder: string[], activeTabPath: string | null }
+      const data = JSON.parse(raw) as { tabOrder: string[], activeTabPath: string | null, pinnedKeys?: string[] }
       if (!data.tabOrder?.length) {
         isRestoringRef.current = false
         return
       }
+
+      const pinnedSet = new Set(data.pinnedKeys || [])
 
       const restoredKeys: string[] = []
       for (const key of data.tabOrder) {
@@ -356,7 +410,10 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
 
         const tabKey = makeTabKey(path, rootPath)
         if (!tabsRef.current.has(tabKey)) {
-          tabsRef.current.set(tabKey, makeTab(path, rootPath))
+          const tab = makeTab(path, rootPath)
+          tab.isPreview = false // Restored tabs are never preview
+          tab.isPinned = pinnedSet.has(key)
+          tabsRef.current.set(tabKey, tab)
 
           // Fetch content silently
           const url = rootPath
@@ -368,9 +425,9 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
               return res.text()
             })
             .then(text => {
-              const tab = tabsRef.current.get(tabKey)
-              if (tab) {
-                tabsRef.current.set(tabKey, { ...tab, content: text, lastSavedContent: text })
+              const t = tabsRef.current.get(tabKey)
+              if (t) {
+                tabsRef.current.set(tabKey, { ...t, content: text, lastSavedContent: text })
                 bump()
               }
             })
@@ -404,12 +461,26 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
     if (isRestoringRef.current) return
 
     try {
-      if (tabOrder.length === 0) {
+      // Only persist non-preview tabs
+      const persistentOrder = tabOrder.filter(k => {
+        const t = tabsRef.current.get(k)
+        return t && !t.isPreview
+      })
+
+      if (persistentOrder.length === 0) {
         localStorage.removeItem(PERSISTENCE_KEY)
       } else {
+        // activeTabPath 如果是 preview，也不持久化 active
+        const activeToSave = activeTabPath && tabsRef.current.get(activeTabPath)?.isPreview
+          ? null
+          : activeTabPath
+
+        const pinnedKeys = persistentOrder.filter(k => tabsRef.current.get(k)?.isPinned)
+
         localStorage.setItem(PERSISTENCE_KEY, JSON.stringify({
-          tabOrder,
-          activeTabPath,
+          tabOrder: persistentOrder,
+          activeTabPath: activeToSave,
+          pinnedKeys: pinnedKeys.length > 0 ? pinnedKeys : undefined,
         }))
       }
     } catch (e) {
@@ -430,7 +501,12 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
       const tab = tabsRef.current.get(key)
       return tab ? tab.content !== tab.lastSavedContent : false
     },
+    isTabPinned: (key: string) => {
+      const tab = tabsRef.current.get(key)
+      return tab ? tab.isPinned : false
+    },
     getActiveTab: getActiveTabSync,
     handleWsFileChange,
+    togglePin,
   }
 }
