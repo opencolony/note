@@ -93,189 +93,201 @@ export const TabBar = memo(function TabBar({
     return map
   }, [grouped])
 
+  // Tabs 渲染内容（移动端和桌面端共用）
+  const tabsContent = Array.from(grouped.entries()).map(([rootPath, keys], groupIdx) => {
+    const colorIndex = rootPathToColorIndex.get(rootPath) ?? 0
+    const projectColor = getProjectColor(colorIndex)
+
+    return (
+      <div key={rootPath ?? 'null'} className="flex items-center gap-1.5 shrink-0">
+        {/* 组间彩色竖线分隔 */}
+        {showGroups && groupIdx > 0 && (
+          <div className="flex items-center self-stretch px-1 shrink-0">
+            <div className="w-[2px] h-5 rounded-full" style={{ backgroundColor: projectColor }} />
+          </div>
+        )}
+        {/* 组名标签 */}
+        {showGroups && (
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
+              <span
+                className="px-2 py-1 text-[10px] font-medium text-muted-foreground bg-muted/40 rounded shrink-0 select-none cursor-pointer"
+                style={{ color: projectColor }}
+              >
+                {getDirName(rootPath, dirs)}
+              </span>
+            </ContextMenuTrigger>
+            <ContextMenuContent onOpenAutoFocus={(e) => e.preventDefault()}>
+              <ContextMenuItem onClick={() => onCloseGroupTabs(rootPath)}>
+                关闭分组
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => onCloseOtherGroupTabs(rootPath)}>
+                关闭分组其他
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
+        )}
+        {/* 组内 tabs */}
+        {keys.map(key => {
+          const tab = tabs.get(key)
+          if (!tab) return null
+          const fileName = tab.path.split('/').pop() || tab.path
+          const isActive = key === activeTabKey
+          const isDirty = tab.content !== tab.lastSavedContent
+          const isPinned = tab.isPinned
+          const isPreview = tab.isPreview
+
+          return (
+            <ContextMenu key={key}>
+              <ContextMenuTrigger asChild>
+                <div
+                  className={cn(
+                    'group flex items-center gap-1.5 text-xs cursor-pointer rounded-lg border shrink-0 select-none transition-all duration-150',
+                    isMobile
+                      ? 'px-3 py-2 gap-1.5 min-w-[100px] max-w-[180px]'
+                      : 'px-3 py-1.5 gap-1.5 min-w-[100px] max-w-[200px]',
+                    isActive
+                      ? 'bg-background text-foreground border-border shadow-sm translate-y-[-1px]'
+                      : 'bg-transparent text-muted-foreground border-transparent hover:bg-muted/50'
+                  )}
+                  onClick={() => onActivate(key)}
+                  onDoubleClick={() => onTogglePin(key)}
+                >
+                  {/* 项目色圆点 — 多项目时显示（非 pinned） */}
+                  {showGroups && !isPinned && (
+                    <span
+                      className="size-1.5 rounded-full shrink-0"
+                      style={{ backgroundColor: projectColor }}
+                    />
+                  )}
+                  {/* Pinned 图标 */}
+                  {isPinned && (
+                    <Pin className="size-3 text-muted-foreground shrink-0 fill-muted-foreground" />
+                  )}
+                  {/* Dirty 圆点 */}
+                  {isDirty && !isPinned && (
+                    <span className="size-1.5 rounded-full bg-primary shrink-0" />
+                  )}
+                  {/* 文件名 — preview 用斜体 */}
+                  <span className={cn('truncate flex-1', isPreview && 'italic opacity-80')}>
+                    {fileName}
+                  </span>
+                  {/* Pin/Unpin 按钮 — 桌面端 hover 显示，移动端仅在 active tab 显示 */}
+                  {(!isPinned && (!isMobile || isActive)) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'shrink-0 rounded-sm',
+                        isMobile ? 'size-6 min-w-6 min-h-6' : 'size-5 min-w-5 min-h-5',
+                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                        isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onTogglePin(key)
+                      }}
+                      title="固定标签"
+                    >
+                      <Pin className={isMobile ? 'size-4' : 'size-3'} />
+                    </Button>
+                  )}
+                  {/* Unpin 按钮 — pinned tab 显示，移动端仅在 active tab 显示 */}
+                  {(isPinned && (!isMobile || isActive)) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'shrink-0 rounded-sm',
+                        isMobile ? 'size-6 min-w-6 min-h-6' : 'size-5 min-w-5 min-h-5',
+                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                        isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onTogglePin(key)
+                      }}
+                      title="取消固定"
+                    >
+                      <Pin className={cn('fill-muted-foreground', isMobile ? 'size-4' : 'size-3')} />
+                    </Button>
+                  )}
+                  {/* 关闭按钮 — 始终显示（移动端），hover 显示（桌面端） */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      'shrink-0 rounded-sm',
+                      isMobile ? 'size-6 min-w-6 min-h-6' : 'size-5 min-w-5 min-h-5',
+                      isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                      isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onCloseRequest(key)
+                    }}
+                    title="关闭标签"
+                  >
+                    <X className={isMobile ? 'size-4' : 'size-3'} />
+                  </Button>
+                </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent onOpenAutoFocus={(e) => e.preventDefault()}>
+                <ContextMenuItem onClick={() => onCloseRequest(key)}>
+                  关闭标签
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => onCloseOtherTabs(key)}>
+                  关闭其他标签
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => onCloseRightTabs(key)}>
+                  关闭右侧标签
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => onCloseLeftTabs(key)}>
+                  关闭左侧标签
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => onTogglePin(key)}>
+                  {isPinned ? '取消固定' : '固定标签'}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => onCloseAllTabs()}>
+                  关闭所有标签
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
+          )
+        })}
+      </div>
+    )
+  })
+
   return (
     <div className="flex items-center bg-muted/20 border-b border-border shrink-0">
-      {/* Scrollable tabs with background context menu */}
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div className={cn(
-            'flex items-center overflow-x-auto overflow-y-hidden flex-1 tabbar-scroll-hide',
-            isMobile ? 'gap-1.5 px-2 py-2' : 'gap-1.5 px-3 py-2'
-          )} style={{ WebkitOverflowScrolling: 'touch' }}>
-            {Array.from(grouped.entries()).map(([rootPath, keys], groupIdx) => {
-              const colorIndex = rootPathToColorIndex.get(rootPath) ?? 0
-              const projectColor = getProjectColor(colorIndex)
-
-              return (
-                <div key={rootPath ?? 'null'} className="flex items-center gap-1.5 shrink-0">
-                  {/* 组间彩色竖线分隔 */}
-                  {showGroups && groupIdx > 0 && (
-                    <div className="flex items-center self-stretch px-1 shrink-0">
-                      <div className="w-[2px] h-5 rounded-full" style={{ backgroundColor: projectColor }} />
-                    </div>
-                  )}
-                  {/* 组名标签 */}
-                  {showGroups && (
-                    <ContextMenu>
-                      <ContextMenuTrigger asChild>
-                        <span
-                          className="px-2 py-1 text-[10px] font-medium text-muted-foreground bg-muted/40 rounded shrink-0 select-none cursor-pointer"
-                          style={{ color: projectColor }}
-                        >
-                          {getDirName(rootPath, dirs)}
-                        </span>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem onClick={() => onCloseGroupTabs(rootPath)}>
-                          关闭分组
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => onCloseOtherGroupTabs(rootPath)}>
-                          关闭分组其他
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  )}
-                  {/* 组内 tabs */}
-                  {keys.map(key => {
-                    const tab = tabs.get(key)
-                    if (!tab) return null
-                    const fileName = tab.path.split('/').pop() || tab.path
-                    const isActive = key === activeTabKey
-                    const isDirty = tab.content !== tab.lastSavedContent
-                    const isPinned = tab.isPinned
-                    const isPreview = tab.isPreview
-
-                    return (
-                      <ContextMenu key={key}>
-                        <ContextMenuTrigger asChild>
-                          <div
-                            className={cn(
-                              'group flex items-center gap-1.5 text-xs cursor-pointer rounded-lg border shrink-0 select-none transition-all duration-150',
-                              isMobile
-                                ? 'px-3 py-2 gap-1.5 min-w-[100px] max-w-[180px]'
-                                : 'px-3 py-1.5 gap-1.5 min-w-[100px] max-w-[200px]',
-                              isActive
-                                ? 'bg-background text-foreground border-border shadow-sm translate-y-[-1px]'
-                                : 'bg-transparent text-muted-foreground border-transparent hover:bg-muted/50'
-                            )}
-                            onClick={() => onActivate(key)}
-                            onDoubleClick={() => onTogglePin(key)}
-                          >
-                            {/* 项目色圆点 — 多项目时显示（非 pinned） */}
-                            {showGroups && !isPinned && (
-                              <span
-                                className="size-1.5 rounded-full shrink-0"
-                                style={{ backgroundColor: projectColor }}
-                              />
-                            )}
-                            {/* Pinned 图标 */}
-                            {isPinned && (
-                              <Pin className="size-3 text-muted-foreground shrink-0 fill-muted-foreground" />
-                            )}
-                            {/* Dirty 圆点 */}
-                            {isDirty && !isPinned && (
-                              <span className="size-1.5 rounded-full bg-primary shrink-0" />
-                            )}
-                            {/* 文件名 — preview 用斜体 */}
-                            <span className={cn('truncate flex-1', isPreview && 'italic opacity-80')}>
-                              {fileName}
-                            </span>
-                            {/* Pin/Unpin 按钮 — 桌面端 hover 显示，移动端仅在 active tab 显示 */}
-                            {(!isPinned && (!isMobile || isActive)) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  'shrink-0 rounded-sm',
-                                  isMobile ? 'size-6 min-w-6 min-h-6' : 'size-5 min-w-5 min-h-5',
-                                  isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-                                  isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
-                                )}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onTogglePin(key)
-                                }}
-                                title="固定标签"
-                              >
-                                <Pin className={isMobile ? 'size-4' : 'size-3'} />
-                              </Button>
-                            )}
-                            {/* Unpin 按钮 — pinned tab 显示，移动端仅在 active tab 显示 */}
-                            {(isPinned && (!isMobile || isActive)) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  'shrink-0 rounded-sm',
-                                  isMobile ? 'size-6 min-w-6 min-h-6' : 'size-5 min-w-5 min-h-5',
-                                  isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-                                  isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
-                                )}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onTogglePin(key)
-                                }}
-                                title="取消固定"
-                              >
-                                <Pin className={cn('fill-muted-foreground', isMobile ? 'size-4' : 'size-3')} />
-                              </Button>
-                            )}
-                            {/* 关闭按钮 — 始终显示（移动端），hover 显示（桌面端） */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={cn(
-                                'shrink-0 rounded-sm',
-                                isMobile ? 'size-6 min-w-6 min-h-6' : 'size-5 min-w-5 min-h-5',
-                                isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-                                isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
-                              )}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onCloseRequest(key)
-                              }}
-                              title="关闭标签"
-                            >
-                              <X className={isMobile ? 'size-4' : 'size-3'} />
-                            </Button>
-                          </div>
-                        </ContextMenuTrigger>
-                        <ContextMenuContent>
-                          <ContextMenuItem onClick={() => onCloseRequest(key)}>
-                            关闭标签
-                          </ContextMenuItem>
-                          <ContextMenuItem onClick={() => onCloseOtherTabs(key)}>
-                            关闭其他标签
-                          </ContextMenuItem>
-                          <ContextMenuItem onClick={() => onCloseRightTabs(key)}>
-                            关闭右侧标签
-                          </ContextMenuItem>
-                          <ContextMenuItem onClick={() => onCloseLeftTabs(key)}>
-                            关闭左侧标签
-                          </ContextMenuItem>
-                          <ContextMenuSeparator />
-                          <ContextMenuItem onClick={() => onTogglePin(key)}>
-                            {isPinned ? '取消固定' : '固定标签'}
-                          </ContextMenuItem>
-                          <ContextMenuSeparator />
-                          <ContextMenuItem onClick={() => onCloseAllTabs()}>
-                            关闭所有标签
-                          </ContextMenuItem>
-                        </ContextMenuContent>
-                      </ContextMenu>
-                    )
-                  })}
-                </div>
-              )
-            })}
-          </div>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem onClick={() => onCloseAllTabs()}>
-            关闭所有标签
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+      {/* Scrollable tabs — 移动端不使用外层 ContextMenu，避免嵌套触发冲突 */}
+      {isMobile ? (
+        <div
+          className="flex items-center gap-1.5 px-2 py-2 overflow-x-auto overflow-y-hidden flex-1 tabbar-scroll-hide"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          {tabsContent}
+        </div>
+      ) : (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div
+              className="flex items-center gap-1.5 px-3 py-2 overflow-x-auto overflow-y-hidden flex-1 tabbar-scroll-hide"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              {tabsContent}
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent onOpenAutoFocus={(e) => e.preventDefault()}>
+            <ContextMenuItem onClick={() => onCloseAllTabs()}>
+              关闭所有标签
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      )}
 
       {/* Right content (status + actions), pinned, not scrollable */}
       {rightContent && (
