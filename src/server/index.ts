@@ -6,6 +6,7 @@ import { loadConfig, getConfigFilePath, DEFAULT_PORT, DEFAULT_HOST, type Colonyn
 import { setupWatcher } from './watcher.js'
 import { IgnoreMatcher } from './ignore.js'
 import { WebSocketServer, WebSocket } from 'ws'
+import { attachHeartbeat, startHeartbeatTimer } from './wsHeartbeat.js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -36,8 +37,12 @@ async function main() {
 
   wss.on('connection', (ws) => {
     clients.add(ws)
+    attachHeartbeat(ws)
     ws.on('close', () => clients.delete(ws))
   })
+
+  const heartbeatInterval = startHeartbeatTimer(clients)
+  wss.on('close', () => clearInterval(heartbeatInterval))
 
   const app = new Hono()
   app.use('*', cors())

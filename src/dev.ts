@@ -10,6 +10,7 @@ import { createFileRouter, createMutableConfigHolder } from './server/api.js'
 import { setupWatcher } from './server/watcher.js'
 import { loadConfig, getConfigFilePath, type DirConfig, type ColonynoteConfig } from './config.js'
 import { IgnoreMatcher } from './server/ignore.js'
+import { attachHeartbeat, startHeartbeatTimer } from './server/wsHeartbeat.js'
 
 function collect(value: string, previous: string[]) {
   return previous.concat([value])
@@ -77,9 +78,13 @@ async function main() {
   wss.on('connection', (ws, req) => {
     console.log(`[WS] New connection from: ${req.socket.remoteAddress}`)
     clients.add(ws)
+    attachHeartbeat(ws)
     ws.on('close', () => clients.delete(ws))
     ws.on('error', (err) => console.log(`[WS] Error: ${err.message}`))
   })
+
+  const heartbeatInterval = startHeartbeatTimer(clients)
+  wss.on('close', () => clearInterval(heartbeatInterval))
 
   server.on('upgrade', (request, socket, head) => {
     console.log(`[WS] Upgrade request: ${request.url}`)
