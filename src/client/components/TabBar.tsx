@@ -144,7 +144,7 @@ export const TabBar = memo(function TabBar({
                   className={cn(
                     'group flex items-center gap-1.5 text-xs cursor-pointer rounded-lg border shrink-0 select-none transition-all duration-150',
                     isMobile
-                      ? 'px-1.5 py-[3px] gap-0.5 min-w-[52px] max-w-[100px] text-[10px]'
+                      ? 'px-1.5 py-[3px] gap-0.5 min-w-[52px] text-[10px]'
                       : 'px-3 py-1.5 gap-1.5 min-w-[100px] max-w-[200px]',
                     isActive
                       ? 'bg-background text-foreground border-border shadow-sm translate-y-[-1px]'
@@ -180,8 +180,8 @@ export const TabBar = memo(function TabBar({
                   {isDirty && !isPinned && (
                     <span className={cn('rounded-full bg-primary shrink-0', isMobile ? 'size-1' : 'size-1.5')} />
                   )}
-                  {/* 文件名 — preview 用斜体 */}
-                  <span className={cn('truncate flex-1', isPreview && 'italic opacity-80')}>
+                  {/* 文件名 — preview 用斜体，移动端不截断 */}
+                  <span className={cn(isMobile ? 'flex-1' : 'truncate flex-1', isPreview && 'italic opacity-80')}>
                     {fileName}
                   </span>
                   {/* 关闭按钮 — 始终显示（移动端），hover 显示（桌面端） */}
@@ -204,7 +204,7 @@ export const TabBar = memo(function TabBar({
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        'shrink-0 rounded-sm size-5 min-w-5 min-h-5 opacity-0 group-hover:opacity-100',
+                        'shrink-0 rounded-sm size-5 min-w-5 min-h-5 hidden group-hover:inline-flex',
                         isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
                       )}
                       onClick={(e) => {
