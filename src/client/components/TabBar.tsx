@@ -102,8 +102,8 @@ export const TabBar = memo(function TabBar({
       <div key={rootPath ?? 'null'} className="flex items-center gap-1.5 shrink-0">
         {/* 组间彩色竖线分隔 */}
         {showGroups && groupIdx > 0 && (
-          <div className="flex items-center self-stretch px-1 shrink-0">
-            <div className="w-[2px] h-5 rounded-full" style={{ backgroundColor: projectColor }} />
+          <div className={cn('flex items-center self-stretch shrink-0', isMobile ? 'px-0.5' : 'px-1')}>
+            <div className={cn('rounded-full', isMobile ? 'w-[1.5px] h-4' : 'w-[2px] h-5')} style={{ backgroundColor: projectColor }} />
           </div>
         )}
         {/* 组名标签 */}
@@ -144,7 +144,7 @@ export const TabBar = memo(function TabBar({
                   className={cn(
                     'group flex items-center gap-1.5 text-xs cursor-pointer rounded-lg border shrink-0 select-none transition-all duration-150',
                     isMobile
-                      ? 'px-3 py-2 gap-1.5 min-w-[100px] max-w-[180px]'
+                      ? 'px-1.5 py-[3px] gap-0.5 min-w-[52px] max-w-[100px] text-[10px]'
                       : 'px-3 py-1.5 gap-1.5 min-w-[100px] max-w-[200px]',
                     isActive
                       ? 'bg-background text-foreground border-border shadow-sm translate-y-[-1px]'
@@ -156,31 +156,27 @@ export const TabBar = memo(function TabBar({
                   {/* 项目色圆点 — 多项目时显示（非 pinned） */}
                   {showGroups && !isPinned && (
                     <span
-                      className="size-1.5 rounded-full shrink-0"
+                      className={cn('rounded-full shrink-0', isMobile ? 'size-1' : 'size-1.5')}
                       style={{ backgroundColor: projectColor }}
                     />
                   )}
                   {/* Pinned 图标 */}
                   {isPinned && (
-                    <Pin className="size-3 text-muted-foreground shrink-0 fill-muted-foreground" />
+                    <Pin className={cn('text-muted-foreground shrink-0 fill-muted-foreground', isMobile ? 'size-2.5' : 'size-3')} />
                   )}
                   {/* Dirty 圆点 */}
                   {isDirty && !isPinned && (
-                    <span className="size-1.5 rounded-full bg-primary shrink-0" />
+                    <span className={cn('rounded-full bg-primary shrink-0', isMobile ? 'size-1' : 'size-1.5')} />
                   )}
                   {/* 文件名 — preview 用斜体 */}
                   <span className={cn('truncate flex-1', isPreview && 'italic opacity-80')}>
                     {fileName}
                   </span>
                   {/* Pin/Unpin 按钮 — 桌面端 hover 显示，移动端仅在 active tab 显示 */}
-                  {(!isPinned && (!isMobile || isActive)) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
+                  {(!isPinned && (!isMobile || isActive)) && (isMobile ? (
+                    <button
                       className={cn(
-                        'shrink-0 rounded-sm',
-                        isMobile ? 'size-6 min-w-6 min-h-6' : 'size-5 min-w-5 min-h-5',
-                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                        'shrink-0 flex items-center justify-center rounded-sm opacity-100',
                         isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
                       )}
                       onClick={(e) => {
@@ -189,18 +185,30 @@ export const TabBar = memo(function TabBar({
                       }}
                       title="固定标签"
                     >
-                      <Pin className={isMobile ? 'size-4' : 'size-3'} />
-                    </Button>
-                  )}
-                  {/* Unpin 按钮 — pinned tab 显示，移动端仅在 active tab 显示 */}
-                  {(isPinned && (!isMobile || isActive)) && (
+                      <Pin className="size-2.5" />
+                    </button>
+                  ) : (
                     <Button
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        'shrink-0 rounded-sm',
-                        isMobile ? 'size-6 min-w-6 min-h-6' : 'size-5 min-w-5 min-h-5',
-                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                        'shrink-0 rounded-sm size-5 min-w-5 min-h-5 opacity-0 group-hover:opacity-100',
+                        isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onTogglePin(key)
+                      }}
+                      title="固定标签"
+                    >
+                      <Pin className="size-3" />
+                    </Button>
+                  ))}
+                  {/* Unpin 按钮 — pinned tab 显示，移动端仅在 active tab 显示 */}
+                  {(isPinned && (!isMobile || isActive)) && (isMobile ? (
+                    <button
+                      className={cn(
+                        'shrink-0 flex items-center justify-center rounded-sm opacity-100',
                         isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
                       )}
                       onClick={(e) => {
@@ -209,27 +217,57 @@ export const TabBar = memo(function TabBar({
                       }}
                       title="取消固定"
                     >
-                      <Pin className={cn('fill-muted-foreground', isMobile ? 'size-4' : 'size-3')} />
+                      <Pin className="size-2.5 fill-muted-foreground" />
+                    </button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'shrink-0 rounded-sm size-5 min-w-5 min-h-5 opacity-0 group-hover:opacity-100',
+                        isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onTogglePin(key)
+                      }}
+                      title="取消固定"
+                    >
+                      <Pin className="size-3 fill-muted-foreground" />
+                    </Button>
+                  ))}
+                  {/* 关闭按钮 — 始终显示（移动端），hover 显示（桌面端） */}
+                  {isMobile ? (
+                    <button
+                      className={cn(
+                        'shrink-0 flex items-center justify-center rounded-sm opacity-100',
+                        isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onCloseRequest(key)
+                      }}
+                      title="关闭标签"
+                    >
+                      <X className="size-2.5" />
+                    </button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'shrink-0 rounded-sm size-5 min-w-5 min-h-5 opacity-0 group-hover:opacity-100',
+                        isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onCloseRequest(key)
+                      }}
+                      title="关闭标签"
+                    >
+                      <X className="size-3" />
                     </Button>
                   )}
-                  {/* 关闭按钮 — 始终显示（移动端），hover 显示（桌面端） */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      'shrink-0 rounded-sm',
-                      isMobile ? 'size-6 min-w-6 min-h-6' : 'size-5 min-w-5 min-h-5',
-                      isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-                      isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onCloseRequest(key)
-                    }}
-                    title="关闭标签"
-                  >
-                    <X className={isMobile ? 'size-4' : 'size-3'} />
-                  </Button>
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -266,7 +304,7 @@ export const TabBar = memo(function TabBar({
       {/* Scrollable tabs — 移动端不使用外层 ContextMenu，避免嵌套触发冲突 */}
       {isMobile ? (
         <div
-          className="flex items-center gap-1.5 px-2 py-2 overflow-x-auto overflow-y-hidden flex-1 tabbar-scroll-hide"
+          className="flex items-center gap-0.5 px-1.5 py-1 overflow-x-auto overflow-y-hidden flex-1 tabbar-scroll-hide"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {tabsContent}
