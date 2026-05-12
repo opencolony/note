@@ -145,7 +145,7 @@ export const TabBar = memo(function TabBar({
                     'group flex items-center gap-1.5 text-xs cursor-pointer rounded-lg border shrink-0 select-none transition-all duration-150',
                     isMobile
                       ? 'px-1.5 py-[3px] gap-0.5 min-w-[52px] text-[10px]'
-                      : 'relative px-3 py-1.5 gap-1.5 min-w-[100px] max-w-[200px]',
+                      : 'relative px-3 py-1.5 gap-1.5 min-w-[100px] max-w-[200px] group-hover:pr-7',
                     isActive
                       ? 'bg-background text-foreground border-border shadow-sm translate-y-[-1px]'
                       : 'bg-transparent text-muted-foreground border-transparent hover:bg-muted/50'
