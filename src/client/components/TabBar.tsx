@@ -153,8 +153,8 @@ export const TabBar = memo(function TabBar({
                   onClick={() => onActivate(key)}
                   onDoubleClick={() => onTogglePin(key)}
                 >
-                  {/* Pin/Unpin 按钮 — 最左侧，移动端始终显示，桌面端 hover 显示 */}
-                  {(!isMobile || isActive) && (isMobile ? (
+                  {/* Pin/Unpin 按钮 — 移动端 active tab 显示 */}
+                  {isMobile && isActive && (
                     <button
                       className={cn(
                         'shrink-0 flex items-center justify-center rounded-sm opacity-100',
@@ -168,23 +168,7 @@ export const TabBar = memo(function TabBar({
                     >
                       <Pin className={cn('size-2.5', isPinned && 'fill-muted-foreground')} />
                     </button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        'shrink-0 rounded-sm size-5 min-w-5 min-h-5 opacity-0 group-hover:opacity-100',
-                        isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onTogglePin(key)
-                      }}
-                      title={isPinned ? '取消固定' : '固定标签'}
-                    >
-                      <Pin className={cn('size-3', isPinned && 'fill-muted-foreground')} />
-                    </Button>
-                  ))}
+                  )}
                   {/* 项目色圆点 — 多项目时显示（非 pinned） */}
                   {showGroups && !isPinned && (
                     <span
