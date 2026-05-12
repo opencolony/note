@@ -145,7 +145,7 @@ export const TabBar = memo(function TabBar({
                     'group flex items-center gap-1.5 text-xs cursor-pointer rounded-lg border shrink-0 select-none transition-all duration-150',
                     isMobile
                       ? 'px-1.5 py-[3px] gap-0.5 min-w-[52px] text-[10px]'
-                      : 'px-3 py-1.5 gap-1.5 min-w-[100px] max-w-[200px]',
+                      : 'relative px-3 py-1.5 gap-1.5 min-w-[100px] max-w-[200px]',
                     isActive
                       ? 'bg-background text-foreground border-border shadow-sm translate-y-[-1px]'
                       : 'bg-transparent text-muted-foreground border-transparent hover:bg-muted/50'
@@ -204,7 +204,7 @@ export const TabBar = memo(function TabBar({
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        'shrink-0 rounded-sm size-5 min-w-5 min-h-5 hidden group-hover:inline-flex',
+                        'absolute right-1 top-1/2 -translate-y-1/2 rounded-sm size-5 min-w-5 min-h-5 opacity-0 group-hover:opacity-100',
                         isActive ? 'hover:bg-muted' : 'hover:bg-muted/50'
                       )}
                       onClick={(e) => {
