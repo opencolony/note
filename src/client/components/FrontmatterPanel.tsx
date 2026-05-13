@@ -1,6 +1,38 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, X } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Plus, X, Tags } from 'lucide-react'
 import { load, dump } from 'js-yaml'
+
+function AutoResizeTextarea({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  className?: string
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [value])
+
+  return (
+    <textarea
+      ref={ref}
+      className={className}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={1}
+    />
+  )
+}
 
 interface FrontmatterPanelProps {
   rawFrontmatter: string | null
@@ -48,6 +80,7 @@ function parseFmData(raw: string): Record<string, unknown> {
 
 export function FrontmatterPanel({ rawFrontmatter, onFrontmatterChange }: FrontmatterPanelProps) {
   const [fields, setFields] = useState<Field[]>([])
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
   // Sync from rawFrontmatter prop
   useEffect(() => {
@@ -102,39 +135,72 @@ export function FrontmatterPanel({ rawFrontmatter, onFrontmatterChange }: Frontm
     })
   }, [writeBack])
 
-  if (fields.length === 0) return null
-
   return (
     <div className="frontmatter-panel">
-      <div className="frontmatter-panel-header">Metadata</div>
-      <div className="frontmatter-fields">
-        {fields.map((field, index) => (
-          <div key={index} className="frontmatter-field">
-            <input
-              className="frontmatter-key-input"
-              value={field.key}
-              onChange={(e) => updateFieldKey(index, e.target.value)}
-              placeholder="key"
-            />
-            <span className="frontmatter-separator">:</span>
-            <input
-              className="frontmatter-value-input"
-              value={field.value}
-              onChange={(e) => updateFieldValue(index, e.target.value)}
-              placeholder="value"
-            />
-            <button
-              className="frontmatter-remove-btn"
-              onClick={() => removeField(index)}
-              title="删除字段"
-            >
-              <X className="size-3.5" />
-            </button>
-          </div>
-        ))}
+      {/* Header */}
+      <div className="frontmatter-panel-header">
+        <div className="frontmatter-panel-header-left">
+          <Tags className="frontmatter-panel-header-icon" />
+          <span className="frontmatter-panel-header-title">文档属性</span>
+        </div>
+        <span className="frontmatter-panel-header-count">{fields.length} 项</span>
       </div>
+
+      {/* Table Header */}
+      <div className="frontmatter-table-header">
+        <div className="frontmatter-table-header-cell frontmatter-table-header-key">属性</div>
+        <div className="frontmatter-table-header-cell frontmatter-table-header-value">值</div>
+        <div className="frontmatter-table-header-cell frontmatter-table-header-action" />
+      </div>
+
+      {/* Fields */}
+      <div className="frontmatter-table-body">
+        {fields.length === 0 ? (
+          <div className="frontmatter-empty-state">
+            暂无属性，点击下方添加
+          </div>
+        ) : (
+          fields.map((field, index) => (
+            <div
+              key={index}
+              className="frontmatter-table-row"
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
+              <div className={`frontmatter-table-cell frontmatter-table-cell-key ${hoveredIndex === index ? 'hovered' : ''}`}>
+                <input
+                  className="frontmatter-key-input"
+                  value={field.key}
+                  onChange={(e) => updateFieldKey(index, e.target.value)}
+                  placeholder="key"
+                />
+              </div>
+              <div className={`frontmatter-table-cell frontmatter-table-cell-value ${hoveredIndex === index ? 'hovered' : ''}`}>
+                <AutoResizeTextarea
+                  className="frontmatter-value-input"
+                  value={field.value}
+                  onChange={(v) => updateFieldValue(index, v)}
+                  placeholder="value"
+                />
+              </div>
+              <div className={`frontmatter-table-cell frontmatter-table-cell-action ${hoveredIndex === index ? 'hovered' : ''}`}>
+                <button
+                  className="frontmatter-remove-btn"
+                  onClick={() => removeField(index)}
+                  title="删除字段"
+                  style={{ opacity: hoveredIndex === index ? 1 : 0 }}
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Add Button */}
       <button className="frontmatter-add-btn" onClick={addField}>
-        <Plus className="size-3.5" />
+        <Plus className="size-3" />
         添加字段
       </button>
     </div>

@@ -719,7 +719,9 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
         {mode === 'wysiwyg' && !isMobile && <EditorToolbar editor={editor} variant="desktop" />}
       </div>
       <div className="tiptap-editor-scroll-area">
-        <FrontmatterPanel rawFrontmatter={displayFrontmatter} onFrontmatterChange={handleFrontmatterChange} />
+        <div className="frontmatter-panel-wrapper">
+          <FrontmatterPanel rawFrontmatter={displayFrontmatter} onFrontmatterChange={handleFrontmatterChange} />
+        </div>
         <EditorContent editor={editor} className="tiptap-editor-content" />
       </div>
       {isMobile && mode === 'wysiwyg' && <EditorToolbar editor={editor} variant="mobile" />}

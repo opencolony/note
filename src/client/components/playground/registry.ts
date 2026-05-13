@@ -7,5 +7,6 @@ import { editDirDialogStylesCase } from './cases/edit-dir-dialog-styles'
 import { addDirDialogStylesCase } from './cases/add-dir-dialog-styles'
 import { addDirSearchStylesCase } from './cases/add-dir-search-styles'
 import { fileItemMenuStylesCase } from './cases/file-item-menu-styles'
+import { frontmatterPanelStylesCase } from './cases/frontmatter-panel-styles'
 
-export const playgroundCases: PlaygroundCase[] = [tabbarStylesCase, tabbarCompactCase, dirSwitcherStylesCase, emptyStateStylesCase, editDirDialogStylesCase, addDirDialogStylesCase, addDirSearchStylesCase, fileItemMenuStylesCase]
+export const playgroundCases: PlaygroundCase[] = [tabbarStylesCase, tabbarCompactCase, dirSwitcherStylesCase, emptyStateStylesCase, editDirDialogStylesCase, addDirDialogStylesCase, addDirSearchStylesCase, fileItemMenuStylesCase, frontmatterPanelStylesCase]
