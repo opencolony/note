@@ -619,6 +619,34 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
     }
   }, [makeTab, bump])
 
+  // WebSocket 重连成功后刷新所有 clean tab 的内容
+  useEffect(() => {
+    const handleWsReconnected = () => {
+      for (const [key, tab] of tabsRef.current) {
+        if (tab.content !== tab.lastSavedContent) continue // dirty tab, skip
+
+        const url = tab.rootPath
+          ? `/api/files${tab.path}?root=${encodeURIComponent(tab.rootPath)}`
+          : `/api/files${tab.path}`
+        fetch(url)
+          .then(res => {
+            if (!res.ok) throw new Error('Failed to reload')
+            return res.text()
+          })
+          .then(text => {
+            const currentTab = tabsRef.current.get(key)
+            if (currentTab) {
+              tabsRef.current.set(key, { ...currentTab, content: text, lastSavedContent: text })
+              bump()
+            }
+          })
+          .catch(() => {})
+      }
+    }
+    window.addEventListener('ws:reconnected', handleWsReconnected)
+    return () => window.removeEventListener('ws:reconnected', handleWsReconnected)
+  }, [bump])
+
   // --- Persistence: save on change ---
   useEffect(() => {
     if (isRestoringRef.current) return

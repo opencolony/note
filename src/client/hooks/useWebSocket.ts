@@ -8,6 +8,7 @@ let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let pongTimeoutTimer: ReturnType<typeof setTimeout> | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let visibilityBound = false
+let wasConnected = false
 
 const HEARTBEAT_INTERVAL = 25000
 const PONG_TIMEOUT = 10000
@@ -43,6 +44,14 @@ function sendPing() {
   try {
     globalWs.send(JSON.stringify({ type: 'ping' }))
   } catch {
+    // 发送失败，连接可能已死，强制关闭触发重连
+    if (globalWs) {
+      try {
+        globalWs.close()
+      } catch {
+        // ignore
+      }
+    }
     return
   }
   if (pongTimeoutTimer) clearTimeout(pongTimeoutTimer)
@@ -87,6 +96,11 @@ function createGlobalWebSocket() {
   ws.onopen = () => {
     setStatus('connected')
     startHeartbeat()
+    if (wasConnected) {
+      // 重连成功，通知外部刷新
+      window.dispatchEvent(new CustomEvent('ws:reconnected'))
+    }
+    wasConnected = true
   }
 
   ws.onclose = () => {

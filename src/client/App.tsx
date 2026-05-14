@@ -442,6 +442,15 @@ function App() {
     }
   }, [fetchFiles, activeDir, handleWsFileChange]))
 
+  // WebSocket 重连成功后刷新文件树
+  useEffect(() => {
+    const handleWsReconnected = () => {
+      fetchFiles()
+    }
+    window.addEventListener('ws:reconnected', handleWsReconnected)
+    return () => window.removeEventListener('ws:reconnected', handleWsReconnected)
+  }, [fetchFiles])
+
   const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory', rootPath?: string) => {
     if (type === 'file') {
       const parts = selectedPath.split('/').filter(Boolean)
