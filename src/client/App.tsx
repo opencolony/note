@@ -13,6 +13,7 @@ import { CopyFileModal } from './components/CopyFileModal'
 import { SettingsDialog } from './components/SettingsDialog'
 import { AddDirDialog } from './components/AddDirDialog'
 import { EditDirDialog } from './components/EditDirDialog'
+import { GitCommitDialog } from './components/GitCommitDialog'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
 import {
@@ -79,6 +80,7 @@ interface SidebarContentProps {
   onDirChange?: (dirPath: string) => void
   onAddDir?: () => void
   onEditDir?: () => void
+  onGitCommitRequest?: () => void
   onToggleTheme?: () => void
   themeMode?: 'light' | 'dark' | 'system'
 }
@@ -105,6 +107,7 @@ const SidebarContent = memo(function SidebarContent({
   onDirChange,
   onAddDir,
   onEditDir,
+  onGitCommitRequest,
   onToggleTheme,
   themeMode,
 }: SidebarContentProps) {
@@ -217,6 +220,7 @@ const SidebarContent = memo(function SidebarContent({
         onCreateSubmit={onCreateSubmit}
         onCreateRequest={onCreateRequest}
         onEditDir={onEditDir}
+        onGitCommitRequest={onGitCommitRequest}
       />
     </div>
   )
@@ -247,6 +251,7 @@ function App() {
   const [addDirDialogOpen, setAddDirDialogOpen] = useState(false)
   const [editDirDialogOpen, setEditDirDialogOpen] = useState(false)
   const [editDirPath, setEditDirPath] = useState<string | null>(null)
+  const [gitCommitDialogOpen, setGitCommitDialogOpen] = useState(false)
   const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>(() => {
     const saved = localStorage.getItem('colonynote-theme')
     if (saved === 'light' || saved === 'dark' || saved === 'system') return saved
@@ -861,6 +866,7 @@ function App() {
                 onDirChange={handleDirChange}
                 onAddDir={() => setAddDirDialogOpen(true)}
                 onEditDir={() => { setEditDirPath(activeDir); setEditDirDialogOpen(true) }}
+                onGitCommitRequest={() => setGitCommitDialogOpen(true)}
                 onToggleTheme={handleToggleTheme}
                 themeMode={themeMode}
               />
@@ -901,6 +907,7 @@ function App() {
                 onDirChange={handleDirChange}
                 onAddDir={() => setAddDirDialogOpen(true)}
                 onEditDir={() => { setEditDirPath(activeDir); setEditDirDialogOpen(true) }}
+                onGitCommitRequest={() => setGitCommitDialogOpen(true)}
                 onToggleTheme={handleToggleTheme}
                 themeMode={themeMode}
               />
@@ -1119,6 +1126,12 @@ function App() {
         onOpenChange={setEditDirDialogOpen}
         dirPath={editDirPath}
         isCli={fileGroups.find(g => g.root.path === editDirPath)?.root.isCli}
+      />
+
+      <GitCommitDialog
+        open={gitCommitDialogOpen}
+        onOpenChange={setGitCommitDialogOpen}
+        rootPath={activeDir || undefined}
       />
     </div>
   )

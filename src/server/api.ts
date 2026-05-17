@@ -3,7 +3,7 @@ import fs from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import os from 'os'
-import { execFile } from 'child_process'
+import { execFile, execFileSync } from 'child_process'
 import type { ColonynoteConfig, DirConfig } from '../config.js'
 import { saveConfig, DEFAULT_SENSITIVE_PATHS } from '../config.js'
 import { IgnoreMatcher } from './ignore.js'
@@ -682,6 +682,150 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     }
 
     return c.json({ results: results.slice(0, limit) })
+  })
+
+  // --- Git API ---
+
+  /** 辅助函数：判断路径是否在 git 仓库中 */
+  function getGitRoot(dirPath: string): string | null {
+    try {
+      const result = execFileSync('git', ['rev-parse', '--show-toplevel'], {
+        cwd: dirPath,
+        encoding: 'utf-8',
+      }).trim()
+      return result || null
+    } catch {
+      return null
+    }
+  }
+
+  /** 辅助函数：在 git 仓库中执行命令 */
+  function execGitCommand(gitRoot: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+    return new Promise((resolve, reject) => {
+      execFile('git', args, { cwd: gitRoot, timeout: 30000, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+        if (error) reject(new Error(stderr || error.message))
+        else resolve({ stdout, stderr })
+      })
+    })
+  }
+
+  router.get('/git/status', async (c) => {
+    const config = getConfig()
+    const rootParam = c.req.query('root')
+    let dirPath: string | null = null
+
+    if (rootParam) {
+      dirPath = validateRoot(rootParam, config)
+      if (!dirPath) return c.json({ error: 'Invalid root' }, 400)
+    } else {
+      dirPath = config.dirs[0]?.path ? path.resolve(config.dirs[0].path) : null
+    }
+    if (!dirPath) return c.json({ error: 'No root directory' }, 400)
+
+    const gitRoot = getGitRoot(dirPath)
+    if (!gitRoot) return c.json({ isGitRepo: false })
+
+    // Get git status (short format) and recent log
+    try {
+      const [{ stdout: statusOutput }, { stdout: logOutput }] = await Promise.all([
+        execGitCommand(gitRoot, ['status', '--porcelain']),
+        execGitCommand(gitRoot, ['log', '--oneline', '-n', '20', '--pretty=format:%H|%an|%ad|%s', '--date=short']),
+      ])
+
+      const files: Array<{ path: string; status: string; staged: boolean }> = []
+      for (const line of statusOutput.trim().split('\n').filter(Boolean)) {
+        const stagedStatus = line.slice(0, 1)
+        const unstagedStatus = line.slice(1, 2)
+        const filePath = line.slice(3)
+        files.push({
+          path: filePath,
+          status: `${stagedStatus}${unstagedStatus}`,
+          staged: stagedStatus !== ' ' && stagedStatus !== '?',
+        })
+      }
+
+      const logEntries: Array<{ hash: string; author: string; date: string; message: string }> = []
+      for (const line of logOutput.trim().split('\n').filter(Boolean)) {
+        const parts = line.split('|')
+        if (parts.length >= 4) {
+          logEntries.push({
+            hash: parts[0],
+            author: parts[1],
+            date: parts[2],
+            message: parts.slice(3).join('|'),
+          })
+        }
+      }
+
+      return c.json({
+        isGitRepo: true,
+        gitRoot,
+        files,
+        recentCommits: logEntries,
+      })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : 'Failed to get git status' }, 500)
+    }
+  })
+
+  router.post('/git/commit', async (c) => {
+    const config = getConfig()
+    const rootParam = c.req.query('root')
+    let dirPath: string | null = null
+
+    if (rootParam) {
+      dirPath = validateRoot(rootParam, config)
+      if (!dirPath) return c.json({ error: 'Invalid root' }, 400)
+    } else {
+      dirPath = config.dirs[0]?.path ? path.resolve(config.dirs[0].path) : null
+    }
+    if (!dirPath) return c.json({ error: 'No root directory' }, 400)
+
+    const gitRoot = getGitRoot(dirPath)
+    if (!gitRoot) return c.json({ error: 'Not a git repository' }, 400)
+
+    const body = await c.req.json()
+    const message = body.message?.trim()
+    if (!message) return c.json({ error: 'Commit message is required' }, 400)
+
+    try {
+      // Stage all changes
+      await execGitCommand(gitRoot, ['add', '-A'])
+      // Check if there's anything to commit
+      const { stdout } = await execGitCommand(gitRoot, ['status', '--porcelain'])
+      if (!stdout.trim()) {
+        return c.json({ error: 'No changes to commit' }, 400)
+      }
+      // Commit
+      await execGitCommand(gitRoot, ['commit', '-m', message])
+      return c.json({ success: true })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : 'Failed to commit' }, 500)
+    }
+  })
+
+  router.post('/git/push', async (c) => {
+    const config = getConfig()
+    const rootParam = c.req.query('root')
+    let dirPath: string | null = null
+
+    if (rootParam) {
+      dirPath = validateRoot(rootParam, config)
+      if (!dirPath) return c.json({ error: 'Invalid root' }, 400)
+    } else {
+      dirPath = config.dirs[0]?.path ? path.resolve(config.dirs[0].path) : null
+    }
+    if (!dirPath) return c.json({ error: 'No root directory' }, 400)
+
+    const gitRoot = getGitRoot(dirPath)
+    if (!gitRoot) return c.json({ error: 'Not a git repository' }, 400)
+
+    try {
+      await execGitCommand(gitRoot, ['push'])
+      return c.json({ success: true })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : 'Failed to push' }, 500)
+    }
   })
 
   router.get('/*', async (c) => {

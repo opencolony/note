@@ -1,5 +1,5 @@
-import { memo, SetStateAction, useState, useRef, useEffect } from 'react'
-import { ChevronRight, File, Folder, FolderOpen, Trash2, FileText, MoreHorizontal, Pencil, ArrowRight, FilePlus, FolderPlus } from 'lucide-react'
+import { memo, SetStateAction, useState, useRef, useEffect, useCallback } from 'react'
+import { ChevronRight, File, Folder, FolderOpen, Trash2, FileText, MoreHorizontal, Pencil, ArrowRight, FilePlus, FolderPlus, GitBranch, Loader2 } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
@@ -51,6 +51,7 @@ interface FileTreeProps {
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
   onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
   onEditDir?: () => void
+  onGitCommitRequest?: () => void
 }
 
 const TreeNode = memo(function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, currentDir, activeRoot }: {
@@ -328,9 +329,28 @@ const EmptyState = memo(({ activeRoot, onCreateRequest, onEditDir }: {
   )
 })
 
-export const FileTree = memo(function FileTree({ files, activePath, activeRoot, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, onEditDir }: FileTreeProps) {
+export const FileTree = memo(function FileTree({ files, activePath, activeRoot, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, onEditDir, onGitCommitRequest }: FileTreeProps) {
   const [editName, setEditName] = useState('')
+  const [isGitRepo, setIsGitRepo] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Check if current root is a git repository
+  useEffect(() => {
+    if (!activeRoot) {
+      setIsGitRepo(false)
+      return
+    }
+    let cancelled = false
+    fetch(`/api/files/git/status?root=${encodeURIComponent(activeRoot)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled) setIsGitRepo(!!data.isGitRepo)
+      })
+      .catch(() => {
+        if (!cancelled) setIsGitRepo(false)
+      })
+    return () => { cancelled = true }
+  }, [activeRoot])
 
   useEffect(() => {
     if (editingType) {
@@ -425,6 +445,17 @@ export const FileTree = memo(function FileTree({ files, activePath, activeRoot, 
               >
                 <Pencil className="size-4" />
               </Button>
+              {isGitRepo && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6"
+                  onClick={() => onGitCommitRequest?.()}
+                  title="Git 提交"
+                >
+                  <GitBranch className="size-4" />
+                </Button>
+              )}
             </div>
           </div>
           <SidebarGroupContent>
