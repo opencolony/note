@@ -304,6 +304,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
   const isInternalUpdateRef = useRef(false)
   const lastNotifiedValueRef = useRef<string>(value)
   const lastPathRef = useRef<string | null>(null)
+  const prevValueRef = useRef<string>(value)
   const frontmatterRef = useRef<string | null>(null)
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -623,7 +624,10 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     })
 
     // 延迟恢复滚动位置，确保 ProseMirror DOM 完全更新
-    if (isPathChanged) {
+    // 在切换文件或内容首次加载完成时恢复（页面刷新后内容从空加载到实际内容）
+    const isContentLoaded = prevValueRef.current === '' && value.length > 0
+    prevValueRef.current = value
+    if (isPathChanged || isContentLoaded) {
       const pos = scrollPosition || 0
       if (pos > 0) {
         setTimeout(() => {
@@ -726,6 +730,51 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       }, 100)
     }
   }, [mode, scrollPosition])
+
+  // 监听滚动并自动保存滚动位置到 localStorage（防抖 500ms）
+  useEffect(() => {
+    if (!path) return
+    const SCROLL_POSITIONS_KEY = 'colonynote:scroll-positions'
+    const tabKey = rootPath ? `${rootPath}::${path}` : path
+    let timer: number
+
+    const saveToStorage = (scrollTop: number) => {
+      try {
+        const raw = localStorage.getItem(SCROLL_POSITIONS_KEY)
+        const data = raw ? JSON.parse(raw) : {}
+        data[tabKey] = scrollTop
+        localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(data))
+      } catch {
+        // ignore storage error
+      }
+    }
+
+    if (mode === 'source') {
+      const textarea = document.querySelector('.editor-textarea')
+      if (!textarea) return
+      const handleScroll = () => {
+        clearTimeout(timer)
+        timer = window.setTimeout(() => saveToStorage(textarea.scrollTop), 500)
+      }
+      textarea.addEventListener('scroll', handleScroll)
+      return () => {
+        textarea.removeEventListener('scroll', handleScroll)
+        clearTimeout(timer)
+      }
+    } else {
+      const container = document.querySelector('.tiptap-editor-scroll-area')
+      if (!container) return
+      const handleScroll = () => {
+        clearTimeout(timer)
+        timer = window.setTimeout(() => saveToStorage(container.scrollTop), 500)
+      }
+      container.addEventListener('scroll', handleScroll)
+      return () => {
+        container.removeEventListener('scroll', handleScroll)
+        clearTimeout(timer)
+      }
+    }
+  }, [mode, path, rootPath])
 
   if (mode === 'source') {
     return (

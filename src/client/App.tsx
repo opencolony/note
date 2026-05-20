@@ -273,6 +273,22 @@ function App() {
   const fetchingRef = useRef(false)
   const loadingRef = useRef<string | null>(null)
   const tabScrollPositionsRef = useRef<Map<string, number>>(new Map())
+  const SCROLL_POSITIONS_KEY = 'colonynote:scroll-positions'
+
+  // 从 localStorage 恢复滚动位置
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SCROLL_POSITIONS_KEY)
+      if (raw) {
+        const data = JSON.parse(raw) as Record<string, number>
+        for (const [key, value] of Object.entries(data)) {
+          tabScrollPositionsRef.current.set(key, value)
+        }
+      }
+    } catch {
+      // ignore parse error
+    }
+  }, [])
 
   const {
     tabs,
@@ -306,6 +322,11 @@ function App() {
     const container = document.querySelector('.tiptap-editor-scroll-area') || document.querySelector('.editor-textarea')
     if (container) {
       tabScrollPositionsRef.current.set(activeTabPath, container.scrollTop)
+      try {
+        localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(Object.fromEntries(tabScrollPositionsRef.current)))
+      } catch {
+        // ignore storage error
+      }
     }
   }, [activeTabPath])
 
