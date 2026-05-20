@@ -272,7 +272,7 @@ function App() {
   const isResizingRef = useRef(false)
   const fetchingRef = useRef(false)
   const loadingRef = useRef<string | null>(null)
-  const scrollPositionRef = useRef<number>(0)
+  const tabScrollPositionsRef = useRef<Map<string, number>>(new Map())
 
   const {
     tabs,
@@ -299,6 +299,15 @@ function App() {
     onSave: () => {},
     onError: (e) => console.error(e),
   })
+
+  // 保存当前 active tab 的滚动位置
+  const saveScrollPosition = useCallback(() => {
+    if (!activeTabPath) return
+    const container = document.querySelector('.tiptap-editor-scroll-area') || document.querySelector('.editor-textarea')
+    if (container) {
+      tabScrollPositionsRef.current.set(activeTabPath, container.scrollTop)
+    }
+  }, [activeTabPath])
 
   // Playground toggle event listener (dev only)
   useEffect(() => {
@@ -471,6 +480,7 @@ function App() {
         })
       }
 
+      saveScrollPosition()
       const effectiveRoot = rootPath || activeDir
       openTab(selectedPath, effectiveRoot)
       const dir = selectedPath.substring(0, selectedPath.lastIndexOf('/'))
@@ -479,7 +489,7 @@ function App() {
     } else {
       setCurrentDir(selectedPath)
     }
-  }, [openTab, activeDir])
+  }, [openTab, activeDir, saveScrollPosition])
 
   const handleExpand = useCallback((path: string) => {
     setCurrentDir(path)
@@ -558,6 +568,7 @@ function App() {
           return
         }
 
+        saveScrollPosition()
         openTab(filePath, rootPath)
         if (rootPath) {
           setActiveDir(rootPath)
@@ -721,14 +732,13 @@ function App() {
 
   const handleToggleEditorMode = useCallback(() => {
     setEditorMode(prev => {
-      // 保存当前滚动位置
-      const editorContainer = document.querySelector('.tiptap-editor, .editor-textarea')
-      if (editorContainer) {
-        scrollPositionRef.current = editorContainer.scrollTop || 0
+      const editorContainer = document.querySelector('.tiptap-editor-scroll-area') || document.querySelector('.editor-textarea')
+      if (editorContainer && activeTabPath) {
+        tabScrollPositionsRef.current.set(activeTabPath, editorContainer.scrollTop)
       }
       return prev === 'wysiwyg' ? 'source' : 'wysiwyg'
     })
-  }, [])
+  }, [activeTabPath])
 
   const handleToggleTheme = useCallback(() => {
     setThemeMode(prev => {
@@ -930,6 +940,7 @@ function App() {
               tabs={tabs}
               activeTabKey={activeTabPath}
               onActivate={(key) => {
+                saveScrollPosition()
                 const tab = tabs.get(key)
                 if (tab) openTab(tab.path, tab.rootPath)
               }}
@@ -1001,14 +1012,16 @@ function App() {
                 )}
                 <div className="flex-1 overflow-hidden">
                   <TipTapEditor
-                    key={activeTab.key}
                     value={activeTab.content}
                     onChange={(val) => updateTabContent(activeTab.key, val)}
                     mode={editorMode}
                     path={activeTab.path}
                     rootPath={activeTab.rootPath}
-                    scrollPosition={scrollPositionRef.current}
-                    onLinkClick={(linkPath) => openTab(linkPath, activeTab.rootPath)}
+                    scrollPosition={tabScrollPositionsRef.current.get(activeTab.key) || 0}
+                    onLinkClick={(linkPath) => {
+                      saveScrollPosition()
+                      openTab(linkPath, activeTab.rootPath)
+                    }}
                   />
                 </div>
               </div>

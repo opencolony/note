@@ -303,7 +303,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
 
   const isInternalUpdateRef = useRef(false)
   const lastNotifiedValueRef = useRef<string>(value)
-  const sourceScrollRef = useRef<number>(0)
+  const lastPathRef = useRef<string | null>(null)
   const frontmatterRef = useRef<string | null>(null)
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -569,6 +569,9 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     if (!editor) return
     if (isInternalUpdateRef.current) return
 
+    const isPathChanged = lastPathRef.current !== path
+    lastPathRef.current = path || null
+
     const { frontmatter: fm, body } = extractFrontmatter(value)
     frontmatterRef.current = fm
     const processedBody = preprocessMathInMarkdown(body)
@@ -583,7 +586,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       editorMarkdown = editor.getText()
     }
 
-    if (editorMarkdown === body) {
+    if (editorMarkdown === body && !isPathChanged) {
       lastNotifiedValueRef.current = value
       return
     }
@@ -606,8 +609,32 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       } catch {
         editor.commands.setTextSelection({ from: 0, to: 0 })
       }
+
+      // 切换文件时恢复滚动位置
+      if (isPathChanged) {
+        const pos = scrollPosition || 0
+        if (pos > 0) {
+          const editorContainer = document.querySelector('.tiptap-editor-scroll-area')
+          if (editorContainer) {
+            editorContainer.scrollTop = pos
+          }
+        }
+      }
     })
-  }, [editor, value])
+
+    // 延迟恢复滚动位置，确保 ProseMirror DOM 完全更新
+    if (isPathChanged) {
+      const pos = scrollPosition || 0
+      if (pos > 0) {
+        setTimeout(() => {
+          const editorContainer = document.querySelector('.tiptap-editor-scroll-area')
+          if (editorContainer) {
+            editorContainer.scrollTop = pos
+          }
+        }, 100)
+      }
+    }
+  }, [editor, value, path, scrollPosition])
 
   useEffect(() => {
     if (editor) {
@@ -669,34 +696,34 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     return () => document.removeEventListener('click', handleClick, true)
   }, [path, onLinkClick])
 
+  const prevModeRef = useRef(mode)
+
   // 恢复切换模式时的滚动位置
   useEffect(() => {
+    const prevMode = prevModeRef.current
+    prevModeRef.current = mode
+
+    // mode 未变化时不处理（tab 切换的恢复由 value effect 负责）
+    if (prevMode === mode) return
+
+    const pos = scrollPosition || 0
+    if (pos <= 0) return
+
+    // setTimeout 确保 DOM 完全更新后再恢复滚动位置
     if (mode === 'source') {
-      const textarea = document.querySelector('.editor-textarea')
-      if (textarea) {
-        const pos = sourceScrollRef.current || scrollPosition || 0
-        if (pos > 0) {
-          requestAnimationFrame(() => {
-            textarea.scrollTop = pos
-          })
+      setTimeout(() => {
+        const textarea = document.querySelector('.editor-textarea')
+        if (textarea) {
+          textarea.scrollTop = pos
         }
-      }
+      }, 100)
     } else if (mode === 'wysiwyg') {
-      // 切换到 wysiwyg 时保存 textarea 的滚动位置
-      const textarea = document.querySelector('.editor-textarea')
-      if (textarea) {
-        sourceScrollRef.current = textarea.scrollTop
-      }
-      // 恢复滚动位置到编辑器
-      const pos = sourceScrollRef.current || scrollPosition || 0
-      if (pos > 0) {
-        const editorContainer = document.querySelector('.tiptap-editor')
+      setTimeout(() => {
+        const editorContainer = document.querySelector('.tiptap-editor-scroll-area')
         if (editorContainer) {
-          requestAnimationFrame(() => {
-            editorContainer.scrollTop = pos
-          })
+          editorContainer.scrollTop = pos
         }
-      }
+      }, 100)
     }
   }, [mode, scrollPosition])
 
