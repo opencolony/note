@@ -728,12 +728,12 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     // Get git status (short format) and recent log
     try {
       const [{ stdout: statusOutput }, { stdout: logOutput }] = await Promise.all([
-        execGitCommand(gitRoot, ['status', '--porcelain']),
-        execGitCommand(gitRoot, ['log', '--oneline', '-n', '20', '--pretty=format:%H|%an|%ad|%s', '--date=short']),
+        execGitCommand(gitRoot, ['-c', 'core.quotepath=false', 'status', '--porcelain']),
+        execGitCommand(gitRoot, ['-c', 'core.quotepath=false', 'log', '--oneline', '-n', '20', '--pretty=format:%H|%an|%ad|%s', '--date=short']),
       ])
 
       const files: Array<{ path: string; status: string; staged: boolean }> = []
-      for (const line of statusOutput.trim().split('\n').filter(Boolean)) {
+      for (const line of statusOutput.split('\n').filter(Boolean)) {
         const stagedStatus = line.slice(0, 1)
         const unstagedStatus = line.slice(1, 2)
         const filePath = line.slice(3)
@@ -789,8 +789,17 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     if (!message) return c.json({ error: 'Commit message is required' }, 400)
 
     try {
-      // Stage all changes
-      await execGitCommand(gitRoot, ['add', '-A'])
+      const selectedFiles = body.files as string[] | undefined
+      if (selectedFiles && selectedFiles.length > 0) {
+        // Unstage all first, then stage only selected files
+        await execGitCommand(gitRoot, ['reset', 'HEAD'])
+        for (const filePath of selectedFiles) {
+          await execGitCommand(gitRoot, ['add', '--', filePath])
+        }
+      } else {
+        // Stage all changes
+        await execGitCommand(gitRoot, ['add', '-A'])
+      }
       // Check if there's anything to commit
       const { stdout } = await execGitCommand(gitRoot, ['status', '--porcelain'])
       if (!stdout.trim()) {

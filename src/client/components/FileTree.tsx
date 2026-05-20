@@ -1,5 +1,5 @@
 import { memo, SetStateAction, useState, useRef, useEffect, useCallback } from 'react'
-import { ChevronRight, File, Folder, FolderOpen, Trash2, FileText, MoreHorizontal, Pencil, ArrowRight, FilePlus, FolderPlus, GitBranch, Loader2 } from 'lucide-react'
+import { ChevronRight, File, Folder, FolderOpen, Trash2, FileText, MoreHorizontal, Pencil, ArrowRight, FilePlus, FolderPlus, GitBranch } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
@@ -331,25 +331,40 @@ const EmptyState = memo(({ activeRoot, onCreateRequest, onEditDir }: {
 
 export const FileTree = memo(function FileTree({ files, activePath, activeRoot, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, onEditDir, onGitCommitRequest }: FileTreeProps) {
   const [editName, setEditName] = useState('')
-  const [isGitRepo, setIsGitRepo] = useState(false)
+  const [hasUncommittedChanges, setHasUncommittedChanges] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Check if current root is a git repository
+  // Check if current root has uncommitted git changes
   useEffect(() => {
     if (!activeRoot) {
-      setIsGitRepo(false)
+      setHasUncommittedChanges(false)
       return
     }
     let cancelled = false
-    fetch(`/api/files/git/status?root=${encodeURIComponent(activeRoot)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (!cancelled) setIsGitRepo(!!data.isGitRepo)
-      })
-      .catch(() => {
-        if (!cancelled) setIsGitRepo(false)
-      })
-    return () => { cancelled = true }
+    const checkGitStatus = () => {
+      fetch(`/api/files/git/status?root=${encodeURIComponent(activeRoot)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!cancelled) setHasUncommittedChanges(data.isGitRepo && data.files?.length > 0)
+        })
+        .catch(() => {
+          if (!cancelled) setHasUncommittedChanges(false)
+        })
+    }
+    checkGitStatus()
+    const interval = setInterval(checkGitStatus, 5000)
+    const handleCommitSuccess = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (!detail?.rootPath || detail.rootPath === activeRoot) {
+        checkGitStatus()
+      }
+    }
+    window.addEventListener('git-commit-success', handleCommitSuccess)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+      window.removeEventListener('git-commit-success', handleCommitSuccess)
+    }
   }, [activeRoot])
 
   useEffect(() => {
@@ -445,7 +460,7 @@ export const FileTree = memo(function FileTree({ files, activePath, activeRoot, 
               >
                 <Pencil className="size-4" />
               </Button>
-              {isGitRepo && (
+              {hasUncommittedChanges && (
                 <Button
                   variant="ghost"
                   size="icon"
