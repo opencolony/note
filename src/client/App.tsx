@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo, lazy, Suspense } from 'react'
-import { Plus, Code, Eye, List, FileText, Folder, FolderOpen, Search, X, Settings, AlertCircle, Sun, Moon, Monitor, FlaskConical } from 'lucide-react'
+import { Plus, Code, Eye, BookOpen, Pencil, List, FileText, Folder, FolderOpen, Search, X, Settings, AlertCircle, Sun, Moon, Monitor, FlaskConical } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useTabs } from './hooks/useTabs'
 import { FileTree } from './components/FileTree'
@@ -242,7 +242,8 @@ function App() {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
   })
-  const [editorMode, setEditorMode] = useState<'wysiwyg' | 'source'>('wysiwyg')
+  const [editorMode, setEditorMode] = useState<'wysiwyg' | 'source' | 'read'>('wysiwyg')
+
   const [currentDir, setCurrentDir] = useState('')
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
   const dirExpandedPathsRef = useRef<Map<string, Set<string>>>(new Map())
@@ -751,13 +752,38 @@ function App() {
     saveAllTabs()
   }, [saveAllTabs])
 
-  const handleToggleEditorMode = useCallback(() => {
+  const handleSetEditorMode = useCallback((mode: 'wysiwyg' | 'source' | 'read') => {
     setEditorMode(prev => {
+      if (prev === mode) return prev
       const editorContainer = document.querySelector('.tiptap-editor-scroll-area') || document.querySelector('.editor-textarea')
       if (editorContainer && activeTabPath) {
         tabScrollPositionsRef.current.set(activeTabPath, editorContainer.scrollTop)
       }
-      return prev === 'wysiwyg' ? 'source' : 'wysiwyg'
+      return mode
+    })
+  }, [activeTabPath])
+
+  /** 主按钮：在阅读/编辑之间切换 */
+  const handleToggleReadWysiwyg = useCallback(() => {
+    setEditorMode(prev => {
+      const next = prev === 'read' ? 'wysiwyg' : 'read'
+      const editorContainer = document.querySelector('.tiptap-editor-scroll-area') || document.querySelector('.editor-textarea')
+      if (editorContainer && activeTabPath) {
+        tabScrollPositionsRef.current.set(activeTabPath, editorContainer.scrollTop)
+      }
+      return next
+    })
+  }, [activeTabPath])
+
+  /** 源码按钮：进入/退出源码模式 */
+  const handleToggleSource = useCallback(() => {
+    setEditorMode(prev => {
+      const next = prev === 'source' ? 'wysiwyg' : 'source'
+      const editorContainer = document.querySelector('.tiptap-editor-scroll-area') || document.querySelector('.editor-textarea')
+      if (editorContainer && activeTabPath) {
+        tabScrollPositionsRef.current.set(activeTabPath, editorContainer.scrollTop)
+      }
+      return next
     })
   }, [activeTabPath])
 
@@ -848,9 +874,37 @@ function App() {
           <Button variant="ghost" size="icon" onClick={() => setSearchDialogOpen(true)} className="size-11 min-h-11 min-w-11">
             <Search className="size-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleToggleEditorMode} title={editorMode === 'wysiwyg' ? '源码模式' : '所见即所得'} className="size-11 min-h-11 min-w-11">
-            {editorMode === 'wysiwyg' ? <Code className="size-5" /> : <Eye className="size-5" />}
-          </Button>
+          {/* 方案 C：双态主按钮 + 源码次级 */}
+          <div className="inline-flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleReadWysiwyg}
+              title={editorMode === 'read' ? '切换到编辑模式' : '切换到阅读模式'}
+              className={cn(
+                'flex items-center justify-center size-9 rounded-lg transition-all duration-150 border',
+                editorMode === 'read'
+                  ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 hover:text-primary'
+                  : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+              )}
+            >
+              {editorMode === 'read' ? <BookOpen className="size-4" /> : <Pencil className="size-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleSource}
+              title="源码模式"
+              className={cn(
+                'flex items-center justify-center size-9 rounded-lg transition-all duration-150 border',
+                editorMode === 'source'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary hover:text-primary-foreground'
+                  : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+              )}
+            >
+              <Code className="size-4" />
+            </Button>
+          </div>
         </header>
       )}
 
@@ -995,9 +1049,37 @@ function App() {
                   <Button variant="ghost" size="icon" className="size-7 min-h-7 min-w-7" onClick={() => setSearchDialogOpen(true)} title="搜索">
                     <Search className="size-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="size-7 min-h-7 min-w-7" onClick={handleToggleEditorMode} title={editorMode === 'wysiwyg' ? '源码模式' : '所见即所得'}>
-                    {editorMode === 'wysiwyg' ? <Code className="size-3.5" /> : <Eye className="size-3.5" />}
-                  </Button>
+                  {/* 方案 C：双态主按钮 + 源码次级 */}
+                  <div className="inline-flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'flex items-center justify-center size-6 rounded-md transition-all duration-150 border',
+                        editorMode === 'read'
+                          ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 hover:text-primary'
+                          : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+                      )}
+                      onClick={handleToggleReadWysiwyg}
+                      title={editorMode === 'read' ? '切换到编辑模式' : '切换到阅读模式'}
+                    >
+                      {editorMode === 'read' ? <BookOpen className="size-3" /> : <Pencil className="size-3" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'flex items-center justify-center size-6 rounded-md transition-all duration-150 border',
+                        editorMode === 'source'
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary hover:text-primary-foreground'
+                          : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+                      )}
+                      onClick={handleToggleSource}
+                      title="源码模式"
+                    >
+                      <Code className="size-3" />
+                    </Button>
+                  </div>
                 </>
               ) : undefined}
             />
@@ -1021,7 +1103,7 @@ function App() {
               <div className="flex flex-col flex-1 min-w-0">
                 {isMobile && (
                   <header className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
-                    <span>{editorMode === 'wysiwyg' ? '所见即所得' : '源码'}</span>
+                    <span>{editorMode === 'wysiwyg' ? '所见即所得' : editorMode === 'source' ? '源码' : '阅读模式'}</span>
                     <span className={cn(
                       "px-2 py-0.5 rounded text-xs",
                       activeTab.status === 'saving' && "text-muted-foreground bg-muted",

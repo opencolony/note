@@ -9,5 +9,6 @@ import { addDirSearchStylesCase } from './cases/add-dir-search-styles'
 import { fileItemMenuStylesCase } from './cases/file-item-menu-styles'
 import { frontmatterPanelStylesCase } from './cases/frontmatter-panel-styles'
 import { markdownRenderStylesCase } from './cases/markdown-render-styles'
+import { readModeToggleCase } from './cases/read-mode-toggle'
 
-export const playgroundCases: PlaygroundCase[] = [tabbarStylesCase, tabbarCompactCase, dirSwitcherStylesCase, emptyStateStylesCase, editDirDialogStylesCase, addDirDialogStylesCase, addDirSearchStylesCase, fileItemMenuStylesCase, frontmatterPanelStylesCase, markdownRenderStylesCase]
+export const playgroundCases: PlaygroundCase[] = [tabbarStylesCase, tabbarCompactCase, dirSwitcherStylesCase, emptyStateStylesCase, editDirDialogStylesCase, addDirDialogStylesCase, addDirSearchStylesCase, fileItemMenuStylesCase, frontmatterPanelStylesCase, markdownRenderStylesCase, readModeToggleCase]

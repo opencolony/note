@@ -154,7 +154,7 @@ async function main() {
 
   console.log('Backend server running on http://localhost:5788')
 
-  const vite = spawn('npx', ['vite'], { stdio: 'inherit', shell: true })
+  const vite = spawn('npx', ['vite'], { stdio: 'inherit', shell: true, env: { ...process.env, NODE_ENV: 'development' } })
 
   vite.on('close', (code) => {
     process.exit(code || 0)

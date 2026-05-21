@@ -93,7 +93,7 @@ const imageRenderContext = {
 interface TipTapEditorProps {
   value: string
   onChange: (value: string) => void
-  mode: 'wysiwyg' | 'source'
+  mode: 'wysiwyg' | 'source' | 'read'
   placeholder?: string
   readOnly?: boolean
   path?: string | null
@@ -523,6 +523,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     ],
     content: bodyContent,
     editable: !readOnly && mode === 'wysiwyg',
+    autofocus: mode !== 'read',
     onUpdate: ({ editor }) => {
       if (isInternalUpdateRef.current) {
         return
@@ -646,6 +647,19 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     }
   }, [editor, readOnly, mode])
 
+  // 阅读模式下禁用焦点，避免移动端拉起键盘
+  useEffect(() => {
+    if (!editor || mode !== 'read') return
+    const view = editor.view
+    const dom = view.dom
+    const handleFocus = (e: FocusEvent) => {
+      e.preventDefault()
+      view.dom.blur()
+    }
+    dom.addEventListener('focusin', handleFocus)
+    return () => dom.removeEventListener('focusin', handleFocus)
+  }, [editor, mode])
+
   useEffect(() => {
     if (!path || !onLinkClick) return
 
@@ -712,6 +726,10 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
 
     const pos = scrollPosition || 0
     if (pos <= 0) return
+
+    // 从 read 切换到 wysiwyg 时，DOM 容器相同（都是 .tiptap-editor-scroll-area），
+    // scrollTop 自然保持，不需要手动恢复。手动恢复反而可能与 ProseMirror 自动滚动冲突。
+    if (prevMode === 'read' && mode === 'wysiwyg') return
 
     // setTimeout 确保 DOM 完全更新后再恢复滚动位置
     if (mode === 'source') {
@@ -789,18 +807,22 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     )
   }
 
+  const isReadMode = mode === 'read'
+
   return (
     <div className="tiptap-editor-root tiptap-editor">
       <div className="tiptap-editor-toolbar-area">
-        {mode === 'wysiwyg' && !isMobile && <EditorToolbar editor={editor} variant="desktop" />}
+        {!isReadMode && !isMobile && <EditorToolbar editor={editor} variant="desktop" />}
       </div>
       <div className="tiptap-editor-scroll-area">
-        <div className="frontmatter-panel-wrapper">
-          <FrontmatterPanel rawFrontmatter={displayFrontmatter} onFrontmatterChange={handleFrontmatterChange} />
-        </div>
+        {!isReadMode && (
+          <div className="frontmatter-panel-wrapper">
+            <FrontmatterPanel rawFrontmatter={displayFrontmatter} onFrontmatterChange={handleFrontmatterChange} />
+          </div>
+        )}
         <EditorContent editor={editor} className="tiptap-editor-content" />
       </div>
-      {isMobile && mode === 'wysiwyg' && <EditorToolbar editor={editor} variant="mobile" />}
+      {isMobile && !isReadMode && <EditorToolbar editor={editor} variant="mobile" />}
     </div>
   )
 }
